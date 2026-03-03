@@ -34,6 +34,21 @@
       h1 { margin: 0 0 4px; font-size: 24px; }
       .muted { color: var(--muted); font-size: 13px; }
       .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+      .dropzone {
+        width: 100%;
+        border: 2px dashed #93c5fd;
+        border-radius: 12px;
+        background: #eff6ff;
+        color: #1e3a8a;
+        padding: 18px 14px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.16s ease;
+      }
+      .dropzone.dragover {
+        border-color: #2563eb;
+        background: #dbeafe;
+      }
       .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .unity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
       .field { display: grid; gap: 6px; margin-bottom: 10px; }
@@ -87,7 +102,9 @@
         <strong>上传 APK</strong>
         <div class="row">
           <input id="apkFile" type="file" accept=".apk,application/vnd.android.package-archive" style="display:none" />
-          <button id="pickApkBtn">选择 APK 并自动解析</button>
+          <div id="dropzone" class="dropzone">
+            拖拽 APK 到这里，或点击选择文件后自动解析
+          </div>
         </div>
         <div class="row">
           <span class="muted">任务ID: <code id="taskId">-</code></span>
@@ -129,22 +146,21 @@
             <div class="field"><label>新图标（png/webp/jpg）</label><input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" /></div>
           </div>
         </div>
-      </div>
-
-      <div class="card">
-        <strong>Unity 参数（可选）</strong>
-        <div class="row">
-          <input id="unityPath" type="text" value="Assets/StreamingAssets/scene-config.json" style="min-width:420px" />
-          <button id="loadUnity" class="secondary">读取</button>
-        </div>
-        <div class="unity-grid">
-          <div>
-            <div class="muted" style="margin-bottom:6px;">原包参数（只读）</div>
-            <textarea id="unityOriginalJson" readonly></textarea>
+        <div style="margin-top:12px;">
+          <strong>Unity 参数对照（可选）</strong>
+          <div class="row">
+            <input id="unityPath" type="text" value="Assets/StreamingAssets/scene-config.json" style="min-width:420px" />
+            <button id="loadUnity" class="secondary">读取</button>
           </div>
-          <div>
-            <div class="muted" style="margin-bottom:6px;">修改参数（可编辑）</div>
-            <textarea id="unityModifiedJson" placeholder='示例: [{"path":"gameConfig.maxLevel","value":99}]'></textarea>
+          <div class="unity-grid">
+            <div>
+              <div class="muted" style="margin-bottom:6px;">原包参数（只读）</div>
+              <textarea id="unityOriginalJson" readonly></textarea>
+            </div>
+            <div>
+              <div class="muted" style="margin-bottom:6px;">修改参数（可编辑）</div>
+              <textarea id="unityModifiedJson" placeholder='示例: [{"path":"gameConfig.maxLevel","value":99}]'></textarea>
+            </div>
           </div>
         </div>
       </div>
@@ -286,9 +302,13 @@
         applyStatus(await api(`/api/status/${state.id}`));
       }
 
-      async function upload() {
-        const file = $('apkFile').files?.[0];
-        if (!file) return alert('请先选择 APK 文件');
+      async function uploadFile(file) {
+        if (!file) return;
+        const fileName = String(file.name || '').toLowerCase();
+        if (!fileName.endsWith('.apk')) {
+          alert('仅支持 APK 文件');
+          return;
+        }
 
         const form = new FormData();
         form.append('apk', file);
@@ -374,10 +394,34 @@
       });
 
       $('refreshTools').addEventListener('click', refreshTools);
-      $('pickApkBtn').addEventListener('click', () => $('apkFile').click());
+      $('dropzone').addEventListener('click', () => $('apkFile').click());
       $('apkFile').addEventListener('change', () => {
-        if ($('apkFile').files?.[0]) {
-          upload().catch((e) => alert(e.message));
+        const file = $('apkFile').files?.[0];
+        if (file) {
+          uploadFile(file).catch((e) => alert(e.message));
+        }
+      });
+      ['dragenter', 'dragover'].forEach((evt) => {
+        $('dropzone').addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          $('dropzone').classList.add('dragover');
+        });
+      });
+      ['dragleave', 'dragend'].forEach((evt) => {
+        $('dropzone').addEventListener(evt, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          $('dropzone').classList.remove('dragover');
+        });
+      });
+      $('dropzone').addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        $('dropzone').classList.remove('dragover');
+        const file = e.dataTransfer?.files?.[0];
+        if (file) {
+          uploadFile(file).catch((err) => alert(err.message));
         }
       });
       $('refreshStatus').addEventListener('click', () => refreshStatus().catch((e) => alert(e.message)));
