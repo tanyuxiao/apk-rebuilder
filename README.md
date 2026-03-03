@@ -132,6 +132,7 @@ docker run --rm -p 3000:3000 apk-modder:dev
 
 说明：
 - `quick-start.sh` 会优先拉预构建镜像（`ghcr.io/tanyuxiao/apk-modder:latest`），失败自动回退本地构建。
+- `quick-start.sh` 会自动检测本机架构并设置 `APK_MODDER_PLATFORM`，当前默认选择与工具链兼容性最好的平台。
 - 默认容器平台为 `linux/amd64`，确保 `zipalign`/`apksigner` 在 Apple Silicon 环境可用。
 - Compose 默认使用 Docker named volume（`apk_modder_data`）保存运行数据，避免 macOS bind mount 小文件 IO 瓶颈。
 - 强制本地构建可用：

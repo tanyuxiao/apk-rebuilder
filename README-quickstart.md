@@ -13,6 +13,7 @@ Open: [http://localhost:3000](http://localhost:3000)
 `quick-start.sh` behavior:
 - Try prebuilt image (`ghcr.io/tanyuxiao/apk-modder:latest`) first
 - If registry is denied/unavailable, auto fallback to local build
+- Auto detect host architecture and set container platform (`APK_MODDER_PLATFORM`) for best compatibility
 
 ## Manual: force local build
 ```bash
