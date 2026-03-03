@@ -1,0 +1,24 @@
+{
+  "name": "apk-modder",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "dev": "pnpm -r --parallel --stream --filter backend --filter frontend dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm -r build",
+    "package:app": "rm -rf builds/latest && mkdir -p builds/latest && cp -R packages/backend/dist builds/latest/backend-dist && cp -R packages/frontend/dist builds/latest/frontend-dist && tar -czf builds/apk-modder-app.tar.gz -C builds/latest .",
+    "release:app": "pnpm run build && pnpm run package:app",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "test": "pnpm -r --if-present test",
+    "clean": "rm -rf packages/*/dist packages/*/node_modules node_modules .pnpm-store",
+    "docker:build": "docker build -t apk-modder:dev .",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:save": "mkdir -p builds && docker save apk-modder:dev -o builds/apk-modder-image.tar",
+    "docker:load": "docker load -i builds/apk-modder-image.tar",
+    "release:docker": "pnpm run docker:build && pnpm run docker:save"
+  }
+}

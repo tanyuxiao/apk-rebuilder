@@ -1,0 +1,10 @@
+node_modules
+.pnpm-store
+packages/*/node_modules
+packages/*/dist
+packages/backend/data
+.git
+.gitignore
+.DS_Store
+*.log
+data

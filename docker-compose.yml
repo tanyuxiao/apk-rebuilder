@@ -1,0 +1,24 @@
+services:
+  apk-modder:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APT_MIRROR: ${APT_MIRROR:-https://mirrors.tuna.tsinghua.edu.cn}
+    ports:
+      - '3000:3000'
+    volumes:
+      # Persist app runtime data
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - APKTOOL_PATH=/usr/bin/apktool
+      - ZIPALIGN_PATH=/usr/bin/zipalign
+      - APKSIGNER_PATH=/usr/bin/apksigner
+      - KEYTOOL_PATH=keytool
+      - DEBUG_KEY_ALIAS=androiddebugkey
+      - DEBUG_KEY_PASS=android
+    restart: unless-stopped
