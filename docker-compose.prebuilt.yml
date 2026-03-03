@@ -1,0 +1,4 @@
+services:
+  apk-modder:
+    image: ${APK_MODDER_IMAGE:-ghcr.io/tanyuxiao/apk-modder:latest}
+    pull_policy: always

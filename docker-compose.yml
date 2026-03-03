@@ -1,7 +1,17 @@
 services:
   apk-modder:
-    image: ${APK_MODDER_IMAGE:-ghcr.io/tanyuxiao/apk-modder:latest}
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_BUILD_IMAGE: ${NODE_BUILD_IMAGE:-docker.m.daocloud.io/library/node:20-bookworm}
+        NODE_RUNTIME_IMAGE: ${NODE_RUNTIME_IMAGE:-docker.m.daocloud.io/library/node:20-bookworm-slim}
+        APKTOOL_VERSION: ${APKTOOL_VERSION:-2.11.1}
+        APKTOOL_JAR_URL: ${APKTOOL_JAR_URL:-https://github.com/iBotPeaches/Apktool/releases/download/v2.11.1/apktool_2.11.1.jar}
+        ANDROID_BUILD_TOOLS_VERSION: ${ANDROID_BUILD_TOOLS_VERSION:-34.0.0}
+        ANDROID_BUILD_TOOLS_URL: ${ANDROID_BUILD_TOOLS_URL:-https://dl.google.com/android/repository/build-tools_r34-linux.zip}
+        JDK_URL_AMD64: ${JDK_URL_AMD64:-https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse}
+        JDK_URL_ARM64: ${JDK_URL_ARM64:-https://api.adoptium.net/v3/binary/latest/17/ga/linux/aarch64/jdk/hotspot/normal/eclipse}
     ports:
       - '3000:3000'
     volumes:

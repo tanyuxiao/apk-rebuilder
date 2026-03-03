@@ -5,17 +5,21 @@
 
 ## Start
 ```bash
-docker compose up -d
+./scripts/quick-start.sh
 ```
 
 Open: [http://localhost:3000](http://localhost:3000)
 
-## Fallback: local build when prebuilt image is unavailable
+`quick-start.sh` behavior:
+- Try prebuilt image (`ghcr.io/tanyuxiao/apk-modder:latest`) first
+- If registry is denied/unavailable, auto fallback to local build
+
+## Manual: force local build
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+docker compose up -d --build
 ```
 
-## Optional: mirror overrides for local build (restricted networks)
+## Optional: mirror overrides
 ```bash
 cat > .env <<'EOF'
 APK_MODDER_IMAGE=ghcr.io/tanyuxiao/apk-modder:latest
@@ -26,7 +30,7 @@ ANDROID_BUILD_TOOLS_URL=https://dl.google.com/android/repository/build-tools_r34
 JDK_URL_AMD64=https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse
 JDK_URL_ARM64=https://api.adoptium.net/v3/binary/latest/17/ga/linux/aarch64/jdk/hotspot/normal/eclipse
 EOF
-docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+./scripts/quick-start.sh
 ```
 
 ## Stop

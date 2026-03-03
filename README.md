@@ -125,16 +125,16 @@ docker run --rm -p 3000:3000 apk-modder:dev
 ### 使用 docker compose
 
 ```bash
-docker compose up -d
+./scripts/quick-start.sh
 ```
 
 服务端口：`http://localhost:3000`
 
 说明：
-- 默认通过预构建镜像 `ghcr.io/tanyuxiao/apk-modder:latest` 启动（首次仅拉取镜像，不做本地构建）。
+- `quick-start.sh` 会优先拉预构建镜像（`ghcr.io/tanyuxiao/apk-modder:latest`），失败自动回退本地构建。
 - Compose 默认使用 Docker named volume（`apk_modder_data`）保存运行数据，避免 macOS bind mount 小文件 IO 瓶颈。
-- 如需本地构建，使用：
-  - `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`
+- 强制本地构建可用：
+  - `docker compose up -d --build`
 - 本地构建会下载：
   - `apktool` jar（默认 GitHub release）
   - Android build-tools（默认 `build-tools_r34-linux.zip`）
