@@ -40,14 +40,39 @@
         border-radius: 12px;
         background: #eff6ff;
         color: #1e3a8a;
-        padding: 18px 14px;
+        min-height: 148px;
+        padding: 24px 14px;
         text-align: center;
         cursor: pointer;
         transition: all 0.16s ease;
+        display: grid;
+        place-items: center;
       }
       .dropzone.dragover {
         border-color: #2563eb;
         background: #dbeafe;
+      }
+      .dropzone.loading {
+        border-color: #93c5fd;
+        background: #e0ecff;
+        color: #1e3a8a;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+      .dropzone.loading::before {
+        content: '';
+        width: 26px;
+        height: 26px;
+        border: 3px solid #93c5fd;
+        border-top-color: #2563eb;
+        border-radius: 50%;
+        display: block;
+        margin: 0 auto 10px;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
       .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .unity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
@@ -57,6 +82,7 @@
         width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font-size: 14px;
       }
       textarea { min-height: 180px; font-family: ui-monospace, Menlo, monospace; }
+      textarea[readonly] { background: #f8fafc; border-style: dashed; color: #334155; }
       button, .btn {
         background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 9px 14px; cursor: pointer;
         font-size: 14px; text-decoration: none; display: inline-block;
@@ -69,14 +95,94 @@
       .tag.warn { background: var(--warn); }
       .tag.fail { background: var(--danger); }
       .compare-box { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+      .readonly-pane { background: #f8fafc; border-style: dashed; }
       .compare-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+      .readonly-hint {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 12px;
+        color: #475569;
+        background: #e2e8f0;
+        border-radius: 999px;
+        padding: 2px 8px;
+      }
       .kv { display: grid; grid-template-columns: 118px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; }
       .kv .k { color: var(--muted); font-size: 12px; }
       .kv .v { font-size: 14px; word-break: break-all; }
+      .readonly-pane .kv .v { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; }
       .icon-box { width: 76px; height: 76px; border: 1px solid var(--line); border-radius: 12px; display: grid; place-items: center; overflow: hidden; background: #fff; margin-bottom: 8px; }
       .icon-box img { width: 100%; height: 100%; object-fit: contain; }
       .icon-empty { color: var(--muted); font-size: 12px; }
+      .file-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .file-pick input[type="file"] { display: none; }
+      .file-name { color: #64748b; font-size: 13px; }
       .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+      .modal-mask {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+      }
+      .modal-mask.open { display: flex; }
+      .modal {
+        width: min(680px, calc(100vw - 24px));
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        padding: 14px;
+      }
+      .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+      .editor-canvas-wrap {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 10px;
+        background: #f8fafc;
+        margin-bottom: 10px;
+      }
+      #iconEditorCanvas {
+        width: 100%;
+        max-width: 360px;
+        aspect-ratio: 1 / 1;
+        border-radius: 10px;
+        border: 1px dashed #cbd5e1;
+        background: #fff;
+        display: block;
+        margin: 0 auto;
+      }
+      .editor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .editor-field { display: grid; gap: 6px; }
+      .editor-field label { font-size: 12px; color: #64748b; }
+      .mod-progress-wrap { margin-top: 10px; }
+      .mod-progress-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #64748b;
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+      .mod-progress-track {
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        overflow: hidden;
+      }
+      .mod-progress-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #60a5fa, #2563eb);
+        transition: width 280ms ease;
+      }
+      .mod-progress-bar.success {
+        background: linear-gradient(90deg, #4ade80, #22c55e);
+      }
+      .mod-progress-bar.fail {
+        background: linear-gradient(90deg, #fca5a5, #ef4444);
+      }
       @media (max-width: 860px) {
         .grid { grid-template-columns: 1fr; }
         .unity-grid { grid-template-columns: 1fr; }
@@ -87,7 +193,7 @@
     <div class="wrap">
       <div class="card">
         <h1>APK Modder</h1>
-        <div class="muted">后端单仓 + 静态前端版本</div>
+        <div class="muted">用于上传 APK、修改包信息与 Unity 参数，并自动重构建签名下载的可视化工具。</div>
       </div>
 
       <div class="card">
@@ -121,8 +227,8 @@
           </div>
         </div>
         <div class="grid" style="margin-top:10px">
-          <div class="compare-box">
-            <div class="compare-title">原包信息</div>
+          <div class="compare-box readonly-pane">
+            <div class="compare-title">原包信息 <span class="readonly-hint">只读</span></div>
             <div class="icon-box">
               <img id="srcIcon" alt="source icon" style="display:none" />
               <span id="srcIconEmpty" class="icon-empty">无图标</span>
@@ -143,7 +249,14 @@
             <div class="field"><label>包名</label><input id="packageName" type="text" /></div>
             <div class="field"><label>版本名</label><input id="versionName" type="text" /></div>
             <div class="field"><label>版本号</label><input id="versionCode" type="text" /></div>
-            <div class="field"><label>新图标（png/webp/jpg）</label><input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" /></div>
+            <div class="field">
+              <label>新图标（png/webp/jpg）</label>
+              <div class="file-pick">
+                <input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" />
+                <button id="pickIconBtn" type="button" class="secondary">选择图标文件</button>
+                <span id="iconFileName" class="file-name">未选择任何文件</span>
+              </div>
+            </div>
           </div>
         </div>
         <div style="margin-top:12px;">
@@ -170,6 +283,15 @@
           <button id="modBtn">修改并构建</button>
           <a id="downloadBtn" class="btn success" style="display:none" href="#">下载 APK</a>
         </div>
+        <div class="mod-progress-wrap">
+          <div class="mod-progress-head">
+            <span id="modProgressText">等待修改任务开始</span>
+            <span id="modProgressPercent">0%</span>
+          </div>
+          <div class="mod-progress-track">
+            <div id="modProgressBar" class="mod-progress-bar"></div>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -177,13 +299,60 @@
         <textarea id="logs" readonly></textarea>
       </div>
     </div>
+    <div id="iconEditorMask" class="modal-mask" role="dialog" aria-modal="true">
+      <div class="modal">
+        <div class="modal-head">
+          <strong>编辑图标</strong>
+          <button id="iconEditorCloseBtn" type="button" class="secondary">取消</button>
+        </div>
+        <div class="editor-canvas-wrap">
+          <canvas id="iconEditorCanvas" width="512" height="512"></canvas>
+        </div>
+        <div class="editor-grid">
+          <div class="editor-field">
+            <label>缩放</label>
+            <input id="iconScale" type="range" min="0.5" max="2.5" step="0.01" value="1" />
+          </div>
+          <div class="editor-field">
+            <label>左右位移</label>
+            <input id="iconOffsetX" type="range" min="-220" max="220" step="1" value="0" />
+          </div>
+          <div class="editor-field">
+            <label>上下位移</label>
+            <input id="iconOffsetY" type="range" min="-220" max="220" step="1" value="0" />
+          </div>
+          <div class="editor-field">
+            <label>&nbsp;</label>
+            <button id="iconEditorResetBtn" type="button" class="secondary">重置</button>
+          </div>
+        </div>
+        <div class="row" style="justify-content:flex-end; margin-top:12px;">
+          <button id="iconEditorApplyBtn" type="button">应用图标</button>
+        </div>
+      </div>
+    </div>
 
     <script>
+      const DEFAULT_UNITY_PATH = 'Assets/StreamingAssets/scene-config.json';
       const state = {
         id: '',
         status: 'idle',
         apkInfo: null,
         pollTimer: null,
+        unityAutoCheckedTaskId: '',
+        activeFlow: '',
+        stage: 'idle',
+        iconFile: null,
+        iconPreviewUrl: '',
+        modProgress: 'idle',
+      };
+      const iconEditor = {
+        fileName: 'icon.png',
+        sourceImage: null,
+        sourceUrl: '',
+        scale: 1,
+        offsetX: 0,
+        offsetY: 0,
       };
 
       const $ = (id) => document.getElementById(id);
@@ -208,6 +377,82 @@
         }
       };
 
+      function setIconSelection(file, previewUrl, nameText) {
+        if (state.iconPreviewUrl && state.iconPreviewUrl !== previewUrl) {
+          URL.revokeObjectURL(state.iconPreviewUrl);
+        }
+        state.iconFile = file;
+        state.iconPreviewUrl = previewUrl || '';
+        $('iconFileName').textContent = nameText || '未选择任何文件';
+        renderCompare();
+      }
+
+      function openIconEditor() {
+        $('iconEditorMask').classList.add('open');
+      }
+
+      function closeIconEditor() {
+        $('iconEditorMask').classList.remove('open');
+      }
+
+      function renderIconEditorCanvas() {
+        const canvas = $('iconEditorCanvas');
+        const ctx = canvas.getContext('2d');
+        const img = iconEditor.sourceImage;
+        if (!ctx || !img) return;
+        const cw = canvas.width;
+        const ch = canvas.height;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, cw, ch);
+
+        const fit = Math.min(cw / img.width, ch / img.height);
+        const drawW = img.width * fit * iconEditor.scale;
+        const drawH = img.height * fit * iconEditor.scale;
+        const x = (cw - drawW) / 2 + iconEditor.offsetX;
+        const y = (ch - drawH) / 2 + iconEditor.offsetY;
+        ctx.drawImage(img, x, y, drawW, drawH);
+      }
+
+      async function prepareIconEditor(file) {
+        if (iconEditor.sourceUrl) {
+          URL.revokeObjectURL(iconEditor.sourceUrl);
+        }
+        iconEditor.sourceUrl = URL.createObjectURL(file);
+        iconEditor.fileName = file.name || 'icon.png';
+        iconEditor.scale = 1;
+        iconEditor.offsetX = 0;
+        iconEditor.offsetY = 0;
+        $('iconScale').value = '1';
+        $('iconOffsetX').value = '0';
+        $('iconOffsetY').value = '0';
+
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = iconEditor.sourceUrl;
+        });
+        iconEditor.sourceImage = img;
+        renderIconEditorCanvas();
+        openIconEditor();
+      }
+
+      async function applyIconEditor() {
+        const canvas = $('iconEditorCanvas');
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) {
+          alert('图标处理失败，请重试');
+          return;
+        }
+        const baseName = (iconEditor.fileName || 'icon').replace(/\.[^.]+$/, '');
+        const file = new File([blob], `${baseName}.png`, { type: 'image/png' });
+        const previewUrl = URL.createObjectURL(blob);
+        setIconSelection(file, previewUrl, file.name);
+        closeIconEditor();
+        $('iconFile').value = '';
+      }
+
       async function api(url, options = {}) {
         const res = await fetch(url, options);
         const data = await res.json().catch(() => ({}));
@@ -215,6 +460,68 @@
           throw new Error(data?.error?.message || data?.message || `HTTP ${res.status}`);
         }
         return data?.data ?? data;
+      }
+
+      function inferStageFromLogs(logs) {
+        const last = (logs || []).slice(-8).join('\n');
+        if (/Build apk with apktool|Run zipalign|Sign apk|Mod workflow finished/i.test(last)) return 'build';
+        if (/Start mod workflow|Manifest update failed|Queue mod workflow/i.test(last)) return 'modify';
+        if (/Start apktool decompile|Decompile finished/i.test(last)) return 'parse';
+        return state.activeFlow === 'mod' ? 'modify' : 'parse';
+      }
+
+      function renderStage() {
+        const stage = state.stage;
+        const btnMod = $('modBtn');
+        const drop = $('dropzone');
+        const uploadBusy = stage === 'upload' || stage === 'parse';
+        const running = stage === 'parse' || stage === 'modify' || stage === 'build';
+        drop.classList.toggle('loading', uploadBusy);
+        drop.textContent = uploadBusy ? '上传并解析中，请稍候...' : '拖拽 APK 到这里，或点击选择文件后自动解析';
+        drop.style.pointerEvents = uploadBusy ? 'none' : 'auto';
+        $('apkFile').disabled = uploadBusy;
+        btnMod.disabled = running || !state.id;
+        renderModProgress();
+      }
+
+      function renderModProgress() {
+        const bar = $('modProgressBar');
+        const text = $('modProgressText');
+        const pct = $('modProgressPercent');
+
+        let p = 0;
+        let t = '等待修改任务开始';
+        let cls = '';
+
+        switch (state.modProgress) {
+          case 'modify':
+            p = 45;
+            t = '修改中...';
+            break;
+          case 'build':
+            p = 85;
+            t = '构建与签名中...';
+            break;
+          case 'success':
+            p = 100;
+            t = '修改与构建完成';
+            cls = 'success';
+            break;
+          case 'failed':
+            p = 100;
+            t = '任务失败，请查看日志';
+            cls = 'fail';
+            break;
+          default:
+            p = 0;
+            t = '等待修改任务开始';
+        }
+
+        bar.classList.remove('success', 'fail');
+        if (cls) bar.classList.add(cls);
+        bar.style.width = `${p}%`;
+        text.textContent = t;
+        pct.textContent = `${p}%`;
       }
 
       function renderTools(data) {
@@ -254,8 +561,7 @@
         setText('changedCount', `字段变更 ${changes} 项`);
 
         const srcIcon = info.iconUrl || '';
-        const newIconFile = $('iconFile').files?.[0];
-        const newIcon = newIconFile ? URL.createObjectURL(newIconFile) : srcIcon;
+        const newIcon = state.iconPreviewUrl || srcIcon;
         setIcon('srcIcon', 'srcIconEmpty', srcIcon);
         setIcon('newIcon', 'newIconEmpty', newIcon);
       }
@@ -274,6 +580,13 @@
           renderCompare();
         }
 
+        if (state.id && state.status === 'success' && state.unityAutoCheckedTaskId !== state.id) {
+          state.unityAutoCheckedTaskId = state.id;
+          if (($('unityPath').value.trim() || DEFAULT_UNITY_PATH) === DEFAULT_UNITY_PATH) {
+            void loadUnity(true);
+          }
+        }
+
         const ready = Boolean(data.downloadReady && state.id);
         const dl = $('downloadBtn');
         if (ready) {
@@ -286,7 +599,18 @@
         if (state.status === 'success' || state.status === 'failed') {
           clearInterval(state.pollTimer);
           state.pollTimer = null;
+          if (state.activeFlow === 'mod') {
+            state.modProgress = state.status === 'success' ? 'success' : 'failed';
+          }
+          state.activeFlow = '';
+          state.stage = 'idle';
+        } else if (state.status === 'processing') {
+          state.stage = inferStageFromLogs(data.logs || []);
+          if (state.activeFlow === 'mod' && state.stage === 'build') {
+            state.modProgress = 'build';
+          }
         }
+        renderStage();
       }
 
       async function refreshTools() {
@@ -310,23 +634,42 @@
           return;
         }
 
+        state.activeFlow = 'upload';
+        state.stage = 'upload';
+        renderStage();
+
         const form = new FormData();
         form.append('apk', file);
         const data = await api('/api/upload', { method: 'POST', body: form });
 
         state.id = data.id;
+        state.activeFlow = 'upload';
+        state.stage = 'parse';
+        state.unityAutoCheckedTaskId = '';
+        $('unityOriginalJson').value = '';
+        $('unityModifiedJson').value = '';
+        setIconSelection(null, '', '未选择任何文件');
+        state.modProgress = 'idle';
         setText('taskId', state.id);
         await refreshStatus();
         clearInterval(state.pollTimer);
         state.pollTimer = setInterval(refreshStatus, 1200);
       }
 
-      async function loadUnity() {
-        if (!state.id) return alert('请先上传并解析 APK');
-        const data = await api(`/api/unity-config/${state.id}?path=${encodeURIComponent($('unityPath').value.trim())}`);
-        const pretty = JSON.stringify(data.content, null, 2);
-        $('unityOriginalJson').value = pretty;
-        $('unityModifiedJson').value = pretty;
+      async function loadUnity(silent = false) {
+        if (!state.id) {
+          if (!silent) alert('请先上传并解析 APK');
+          return;
+        }
+        const unityPath = $('unityPath').value.trim() || DEFAULT_UNITY_PATH;
+        try {
+          const data = await api(`/api/unity-config/${state.id}?path=${encodeURIComponent(unityPath)}`);
+          const pretty = JSON.stringify(data.content, null, 2);
+          $('unityOriginalJson').value = pretty;
+          $('unityModifiedJson').value = pretty;
+        } catch (e) {
+          if (!silent) throw e;
+        }
       }
 
       function parseUnityPatchesInput() {
@@ -357,6 +700,10 @@
 
       async function modBuild() {
         if (!state.id) return alert('请先上传并解析 APK');
+        state.activeFlow = 'mod';
+        state.stage = 'modify';
+        state.modProgress = 'modify';
+        renderStage();
         const form = new FormData();
         form.append('id', state.id);
 
@@ -369,7 +716,7 @@
         if (versionName) form.append('versionName', versionName);
         if (versionCode) form.append('versionCode', versionCode);
 
-        const icon = $('iconFile').files?.[0];
+        const icon = state.iconFile;
         if (icon) form.append('icon', icon);
 
         const unityPath = $('unityPath').value.trim();
@@ -383,14 +730,60 @@
           body: form
         });
 
+        state.stage = 'build';
+        state.modProgress = 'build';
+        renderStage();
         await refreshStatus();
         clearInterval(state.pollTimer);
         state.pollTimer = setInterval(refreshStatus, 1200);
       }
 
-      ['appName', 'packageName', 'versionName', 'versionCode', 'iconFile'].forEach((id) => {
+      ['appName', 'packageName', 'versionName', 'versionCode'].forEach((id) => {
         $(id).addEventListener('input', renderCompare);
         $(id).addEventListener('change', renderCompare);
+      });
+      $('pickIconBtn').addEventListener('click', () => $('iconFile').click());
+      $('iconFile').addEventListener('change', () => {
+        const file = $('iconFile').files?.[0];
+        if (!file) return;
+        prepareIconEditor(file).catch(() => {
+          alert('无法读取该图标文件，请更换后重试');
+          $('iconFile').value = '';
+        });
+      });
+      $('iconScale').addEventListener('input', () => {
+        iconEditor.scale = Number($('iconScale').value);
+        renderIconEditorCanvas();
+      });
+      $('iconOffsetX').addEventListener('input', () => {
+        iconEditor.offsetX = Number($('iconOffsetX').value);
+        renderIconEditorCanvas();
+      });
+      $('iconOffsetY').addEventListener('input', () => {
+        iconEditor.offsetY = Number($('iconOffsetY').value);
+        renderIconEditorCanvas();
+      });
+      $('iconEditorResetBtn').addEventListener('click', () => {
+        iconEditor.scale = 1;
+        iconEditor.offsetX = 0;
+        iconEditor.offsetY = 0;
+        $('iconScale').value = '1';
+        $('iconOffsetX').value = '0';
+        $('iconOffsetY').value = '0';
+        renderIconEditorCanvas();
+      });
+      $('iconEditorCloseBtn').addEventListener('click', () => {
+        closeIconEditor();
+        $('iconFile').value = '';
+      });
+      $('iconEditorApplyBtn').addEventListener('click', () => {
+        applyIconEditor().catch(() => alert('图标处理失败，请重试'));
+      });
+      $('iconEditorMask').addEventListener('click', (e) => {
+        if (e.target === $('iconEditorMask')) {
+          closeIconEditor();
+          $('iconFile').value = '';
+        }
       });
 
       $('refreshTools').addEventListener('click', refreshTools);
@@ -429,6 +822,7 @@
       $('modBtn').addEventListener('click', () => modBuild().catch((e) => alert(e.message)));
 
       refreshTools();
+      renderStage();
     </script>
   </body>
 </html>
