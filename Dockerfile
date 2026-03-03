@@ -16,19 +16,15 @@ ARG JDK_URL_AMD64=https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/
 ARG JDK_URL_ARM64=https://api.adoptium.net/v3/binary/latest/17/ga/linux/aarch64/jdk/hotspot/normal/eclipse
 ARG TARGETARCH
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/backend/package.json packages/backend/package.json
-COPY packages/frontend/package.json packages/frontend/package.json
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-COPY . .
-RUN pnpm --filter frontend build \
-  && mkdir -p packages/backend/public \
-  && cp -R packages/frontend/dist/. packages/backend/public/ \
-  && pnpm --filter backend build \
-  && pnpm --filter backend --prod deploy --legacy /opt/backend
+COPY src ./src
+COPY public ./public
+COPY tsconfig.json ./tsconfig.json
+RUN pnpm build && pnpm prune --prod
 
-  RUN set -eux; \
+RUN set -eux; \
   case "${TARGETARCH}" in \
     amd64) jdk_url="${JDK_URL_AMD64}" ;; \
     arm64) jdk_url="${JDK_URL_ARM64}" ;; \
@@ -98,7 +94,10 @@ ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH=/opt/java/openjdk/bin:$PATH
 ENV HOST=0.0.0.0
 
-COPY --from=build /opt/backend /app
+COPY --from=build /app/package.json /app/package.json
+COPY --from=build /app/node_modules /app/node_modules
+COPY --from=build /app/dist /app/dist
+COPY --from=build /app/public /app/public
 
 EXPOSE 3000
 CMD ["node", "dist/index.js"]

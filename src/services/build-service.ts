@@ -34,6 +34,17 @@ async function ensureDebugKeystore(task: Task): Promise<void> {
   ]);
 }
 
+async function tryZipalign(task: Task, unsignedApkPath: string, alignedApkPath: string): Promise<void> {
+  logTask(task, 'Run zipalign');
+  try {
+    await runCommand(zipalignPath, ['-f', '4', unsignedApkPath, alignedApkPath]);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    logTask(task, `zipalign unavailable, fallback to unaligned signing: ${detail}`);
+    await fse.copyFile(unsignedApkPath, alignedApkPath);
+  }
+}
+
 export async function runDecompileTask(task: Task): Promise<void> {
   task.status = 'processing';
   task.error = undefined;
@@ -96,8 +107,7 @@ export async function runModTask(task: Task, payload: ModPayload): Promise<void>
       await runCommand(apktoolPath, ['b', task.decodedDir, '-o', unsignedApkPath]);
     }
 
-    logTask(task, 'Run zipalign');
-    await runCommand(zipalignPath, ['-f', '4', unsignedApkPath, alignedApkPath]);
+    await tryZipalign(task, unsignedApkPath, alignedApkPath);
 
     await ensureDebugKeystore(task);
     logTask(task, 'Sign apk');

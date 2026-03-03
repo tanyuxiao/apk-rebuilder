@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APK Modder</title>
+    <style>
+      :root {
+        --bg: #f5f7fb;
+        --panel: #ffffff;
+        --line: #dcdfe6;
+        --text: #1f2329;
+        --muted: #606266;
+        --primary: #2563eb;
+        --ok: #16a34a;
+        --warn: #d97706;
+        --danger: #dc2626;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 500px at 80% -20%, #dbeafe, transparent), var(--bg);
+        color: var(--text);
+        font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px 24px; }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      h1 { margin: 0 0 4px; font-size: 24px; }
+      .muted { color: var(--muted); font-size: 13px; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .field { display: grid; gap: 6px; margin-bottom: 10px; }
+      .field label { color: var(--muted); font-size: 12px; }
+      input[type="text"], input[type="password"], textarea {
+        width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font-size: 14px;
+      }
+      textarea { min-height: 180px; font-family: ui-monospace, Menlo, monospace; }
+      button, .btn {
+        background: var(--primary); color: #fff; border: none; border-radius: 10px; padding: 9px 14px; cursor: pointer;
+        font-size: 14px; text-decoration: none; display: inline-block;
+      }
+      button.secondary, .btn.secondary { background: #475569; }
+      button.success, .btn.success { background: var(--ok); }
+      button:disabled { opacity: 0.55; cursor: not-allowed; }
+      .tag { display: inline-block; border-radius: 8px; padding: 2px 8px; font-size: 12px; color: #fff; }
+      .tag.ok { background: var(--ok); }
+      .tag.warn { background: var(--warn); }
+      .tag.fail { background: var(--danger); }
+      .compare-box { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+      .compare-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+      .kv { display: grid; grid-template-columns: 118px 1fr auto; gap: 8px; align-items: center; margin: 6px 0; }
+      .kv .k { color: var(--muted); font-size: 12px; }
+      .kv .v { font-size: 14px; word-break: break-all; }
+      .icon-box { width: 76px; height: 76px; border: 1px solid var(--line); border-radius: 12px; display: grid; place-items: center; overflow: hidden; background: #fff; margin-bottom: 8px; }
+      .icon-box img { width: 100%; height: 100%; object-fit: contain; }
+      .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+      @media (max-width: 860px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1>APK Modder</h1>
+        <div class="muted">后端单仓 + 静态前端版本</div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <strong>工具链自检</strong>
+          <button id="refreshTools" class="secondary">刷新</button>
+        </div>
+        <div id="toolsRow" class="row"></div>
+      </div>
+
+      <div class="card">
+        <strong>上传 APK</strong>
+        <div class="row">
+          <input id="apkFile" type="file" accept=".apk,application/vnd.android.package-archive" />
+          <button id="uploadBtn">上传并解析</button>
+          <input id="apiKey" type="password" placeholder="可选 API Key（用于修改/下载）" style="max-width:320px" />
+        </div>
+        <div class="row">
+          <span class="muted">任务ID: <code id="taskId">-</code></span>
+          <span class="muted">状态: <span id="taskStatus">idle</span></span>
+          <button id="refreshStatus" class="secondary">刷新状态</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <strong>包信息对照</strong>
+          <div>
+            <span class="tag warn" id="changedCount">字段变更 0 项</span>
+          </div>
+        </div>
+        <div class="grid" style="margin-top:10px">
+          <div class="compare-box">
+            <div class="compare-title">原包信息</div>
+            <div class="icon-box"><img id="srcIcon" alt="source icon" /></div>
+            <div class="kv"><span class="k">应用名</span><span class="v" id="srcName">-</span><span></span></div>
+            <div class="kv"><span class="k">包名</span><span class="v"><code id="srcPkg">-</code></span><span></span></div>
+            <div class="kv"><span class="k">版本名</span><span class="v" id="srcVer">-</span><span></span></div>
+            <div class="kv"><span class="k">版本号</span><span class="v" id="srcCode">-</span><span></span></div>
+          </div>
+
+          <div class="compare-box">
+            <div class="compare-title">修改信息</div>
+            <div class="icon-box"><img id="newIcon" alt="new icon" /></div>
+            <div class="field"><label>应用名</label><input id="appName" type="text" /></div>
+            <div class="field"><label>包名</label><input id="packageName" type="text" /></div>
+            <div class="field"><label>版本名</label><input id="versionName" type="text" /></div>
+            <div class="field"><label>版本号</label><input id="versionCode" type="text" /></div>
+            <div class="field"><label>新图标（png/webp/jpg）</label><input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" /></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Unity 参数（可选）</strong>
+        <div class="row">
+          <input id="unityPath" type="text" value="Assets/StreamingAssets/scene-config.json" style="min-width:420px" />
+          <button id="loadUnity" class="secondary">读取</button>
+        </div>
+        <textarea id="unityJson" placeholder='示例: [{"path":"gameConfig.maxLevel","value":99}]'></textarea>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <button id="modBtn">修改并构建</button>
+          <a id="downloadBtn" class="btn success" style="display:none" href="#">下载 APK</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>日志</strong>
+        <textarea id="logs" readonly></textarea>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        id: '',
+        status: 'idle',
+        apkInfo: null,
+        pollTimer: null,
+      };
+
+      const $ = (id) => document.getElementById(id);
+      const setText = (id, text) => ($(id).textContent = text ?? '-');
+      const apiKey = () => $('apiKey').value.trim();
+      const withAuth = (headers = {}) => (apiKey() ? { ...headers, 'x-api-key': apiKey() } : headers);
+      const norm = (v) => (v && String(v).trim() ? String(v).trim() : '-');
+
+      async function api(url, options = {}) {
+        const res = await fetch(url, options);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+          throw new Error(data?.error?.message || data?.message || `HTTP ${res.status}`);
+        }
+        return data?.data ?? data;
+      }
+
+      function renderTools(data) {
+        const root = $('toolsRow');
+        root.innerHTML = '';
+        const tools = data?.tools || {};
+        Object.keys(tools).forEach((k) => {
+          const t = tools[k];
+          const item = document.createElement('span');
+          item.className = `tag ${t.ok ? 'ok' : 'fail'}`;
+          item.title = `${t.command} | ${t.detail}`;
+          item.textContent = `${k}: ${t.ok ? 'OK' : 'FAIL'}`;
+          root.appendChild(item);
+        });
+      }
+
+      function renderCompare() {
+        const info = state.apkInfo || {};
+        const next = {
+          appName: $('appName').value.trim() || info.appName || '',
+          packageName: $('packageName').value.trim() || info.packageName || '',
+          versionName: $('versionName').value.trim() || info.versionName || '',
+          versionCode: $('versionCode').value.trim() || info.versionCode || ''
+        };
+
+        setText('srcName', norm(info.appName));
+        setText('srcPkg', norm(info.packageName));
+        setText('srcVer', norm(info.versionName));
+        setText('srcCode', norm(info.versionCode));
+
+        const changes = [
+          norm(info.appName) !== norm(next.appName),
+          norm(info.packageName) !== norm(next.packageName),
+          norm(info.versionName) !== norm(next.versionName),
+          norm(info.versionCode) !== norm(next.versionCode)
+        ].filter(Boolean).length;
+        setText('changedCount', `字段变更 ${changes} 项`);
+
+        const srcIcon = info.iconUrl || '';
+        $('srcIcon').src = srcIcon;
+        $('newIcon').src = $('iconFile').files?.[0] ? URL.createObjectURL($('iconFile').files[0]) : srcIcon;
+      }
+
+      function applyStatus(data) {
+        state.status = data.status || 'idle';
+        state.apkInfo = data.apkInfo || null;
+        setText('taskStatus', state.status);
+        $('logs').value = (data.logs || []).join('\n');
+
+        if (state.apkInfo) {
+          $('appName').value ||= state.apkInfo.appName || '';
+          $('packageName').value ||= state.apkInfo.packageName || '';
+          $('versionName').value ||= state.apkInfo.versionName || '';
+          $('versionCode').value ||= state.apkInfo.versionCode || '';
+          renderCompare();
+        }
+
+        const ready = Boolean(data.downloadReady && state.id);
+        const dl = $('downloadBtn');
+        if (ready) {
+          const key = apiKey();
+          dl.href = key ? `/api/download/${state.id}?api_key=${encodeURIComponent(key)}` : `/api/download/${state.id}`;
+          dl.style.display = 'inline-block';
+        } else {
+          dl.style.display = 'none';
+        }
+
+        if (state.status === 'success' || state.status === 'failed') {
+          clearInterval(state.pollTimer);
+          state.pollTimer = null;
+        }
+      }
+
+      async function refreshTools() {
+        try {
+          renderTools(await api('/api/tools'));
+        } catch (e) {
+          alert(`工具链检查失败: ${e.message}`);
+        }
+      }
+
+      async function refreshStatus() {
+        if (!state.id) return;
+        applyStatus(await api(`/api/status/${state.id}`));
+      }
+
+      async function upload() {
+        const file = $('apkFile').files?.[0];
+        if (!file) return alert('请先选择 APK 文件');
+
+        const form = new FormData();
+        form.append('apk', file);
+        const data = await api('/api/upload', { method: 'POST', body: form });
+
+        state.id = data.id;
+        setText('taskId', state.id);
+        await refreshStatus();
+        clearInterval(state.pollTimer);
+        state.pollTimer = setInterval(refreshStatus, 1200);
+      }
+
+      async function loadUnity() {
+        if (!state.id) return alert('请先上传并解析 APK');
+        const data = await api(`/api/unity-config/${state.id}?path=${encodeURIComponent($('unityPath').value.trim())}`);
+        $('unityJson').value = JSON.stringify(data.content, null, 2);
+      }
+
+      function parseUnityPatchesInput() {
+        const raw = $('unityJson').value.trim();
+        if (!raw) return [];
+
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+
+        const patches = [];
+        const walk = (obj, prefix = '') => {
+          if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+          for (const key of Object.keys(obj)) {
+            const path = prefix ? `${prefix}.${key}` : key;
+            const val = obj[key];
+            if (val && typeof val === 'object' && !Array.isArray(val)) {
+              walk(val, path);
+            } else {
+              patches.push({ path, value: val });
+            }
+          }
+        };
+        walk(parsed);
+        return patches;
+      }
+
+      async function modBuild() {
+        if (!state.id) return alert('请先上传并解析 APK');
+        const form = new FormData();
+        form.append('id', state.id);
+
+        const appName = $('appName').value.trim();
+        const packageName = $('packageName').value.trim();
+        const versionName = $('versionName').value.trim();
+        const versionCode = $('versionCode').value.trim();
+        if (appName) form.append('appName', appName);
+        if (packageName) form.append('packageName', packageName);
+        if (versionName) form.append('versionName', versionName);
+        if (versionCode) form.append('versionCode', versionCode);
+
+        const icon = $('iconFile').files?.[0];
+        if (icon) form.append('icon', icon);
+
+        const unityPath = $('unityPath').value.trim();
+        if (unityPath) form.append('unityConfigPath', unityPath);
+
+        const unityPatches = parseUnityPatchesInput();
+        if (unityPatches.length) form.append('unityPatches', JSON.stringify(unityPatches));
+
+        await api('/api/mod', {
+          method: 'POST',
+          body: form,
+          headers: withAuth()
+        });
+
+        await refreshStatus();
+        clearInterval(state.pollTimer);
+        state.pollTimer = setInterval(refreshStatus, 1200);
+      }
+
+      ['appName', 'packageName', 'versionName', 'versionCode', 'iconFile'].forEach((id) => {
+        $(id).addEventListener('input', renderCompare);
+        $(id).addEventListener('change', renderCompare);
+      });
+
+      $('refreshTools').addEventListener('click', refreshTools);
+      $('uploadBtn').addEventListener('click', () => upload().catch((e) => alert(e.message)));
+      $('refreshStatus').addEventListener('click', () => refreshStatus().catch((e) => alert(e.message)));
+      $('loadUnity').addEventListener('click', () => loadUnity().catch((e) => alert(e.message)));
+      $('modBtn').addEventListener('click', () => modBuild().catch((e) => alert(e.message)));
+
+      refreshTools();
+    </script>
+  </body>
+</html>

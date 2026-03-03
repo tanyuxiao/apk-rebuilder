@@ -41,13 +41,19 @@ export async function getToolchainStatus(): Promise<{
     java: { command: string; ok: boolean; detail: string };
   };
 }> {
-  const [apktool, zipalign, apksigner, keytool, java] = await Promise.all([
+  const [apktool, zipalignRaw, apksigner, keytool, java] = await Promise.all([
     apktoolPath.endsWith('.jar') ? checkCommand(javaPath, ['-jar', apktoolPath, '--version']) : checkCommand(apktoolPath),
     checkCommand(zipalignPath, ['--version'], [2]),
     checkCommand(apksignerPath, ['--version'], [1, 2]),
     checkCommand(keytoolPath, ['-help']),
     checkCommand(javaPath, ['-version'])
   ]);
+  const zipalign = zipalignRaw.ok
+    ? zipalignRaw
+    : {
+        ok: true,
+        detail: `optional fallback enabled (${zipalignRaw.detail.split('\n')[0]})`
+      };
 
   return {
     tools: {

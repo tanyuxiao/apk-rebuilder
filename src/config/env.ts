@@ -55,9 +55,7 @@ export const apiKey = process.env.API_KEY || process.env.AUTH_TOKEN || '';
 export const authEnabled = apiKey.length > 0;
 export const authToken = apiKey;
 
-export const frontendPublicDir =
-  firstExistingPath([path.resolve(process.cwd(), 'public'), path.resolve(process.cwd(), 'packages/backend/public')]) ||
-  path.resolve(process.cwd(), 'public');
+export const frontendPublicDir = path.resolve(process.cwd(), 'public');
 
 export function ensureRuntimeDirs(): void {
   fse.ensureDirSync(uploadDir);

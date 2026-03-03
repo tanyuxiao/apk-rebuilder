@@ -1,8 +1,7 @@
 node_modules
 .pnpm-store
-packages/*/node_modules
-packages/*/dist
-packages/backend/data
+dist
+tests
 .git
 .gitignore
 .DS_Store

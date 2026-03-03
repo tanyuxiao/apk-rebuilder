@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="${APK_MODDER_IMAGE:-ghcr.io/tanyuxiao/apk-modder:latest}"
+IMAGE="${APK_MODDER_IMAGE:-}"
 
 detect_platform() {
   local machine
@@ -11,29 +11,29 @@ detect_platform() {
       echo "linux/amd64"
       ;;
     arm64|aarch64)
-      # Current toolchain binaries (zipalign/apksigner) are validated on amd64 path.
-      # Keep amd64 by default on Apple Silicon for maximum compatibility.
-      echo "linux/amd64"
+      echo "linux/arm64"
       ;;
     *)
-      echo "linux/amd64"
+      echo ""
       ;;
   esac
 }
 
 if [[ -z "${APK_MODDER_PLATFORM:-}" ]]; then
   export APK_MODDER_PLATFORM="$(detect_platform)"
-else
-  export APK_MODDER_PLATFORM
 fi
 
-echo "[quick-start] Trying prebuilt image: ${IMAGE}"
-if docker pull "${IMAGE}" >/dev/null 2>&1; then
-  echo "[quick-start] Prebuilt image is available, starting from image (platform=${APK_MODDER_PLATFORM})."
-  docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
-else
-  echo "[quick-start] Prebuilt image not accessible, falling back to local build (platform=${APK_MODDER_PLATFORM})."
-  docker compose up -d --build
+if [[ -n "${IMAGE}" ]]; then
+  echo "[quick-start] Trying prebuilt image: ${IMAGE}"
+  if docker pull "${IMAGE}" >/dev/null 2>&1; then
+    echo "[quick-start] Prebuilt image is available, starting from image."
+    docker compose -f docker-compose.yml -f docker-compose.prebuilt.yml up -d
+    echo "[quick-start] Done. Open: http://localhost:3000"
+    exit 0
+  fi
+  echo "[quick-start] Prebuilt image not accessible, falling back to local build."
 fi
 
+echo "[quick-start] Starting local build (platform=${APK_MODDER_PLATFORM:-auto})"
+docker compose up -d --build
 echo "[quick-start] Done. Open: http://localhost:3000"

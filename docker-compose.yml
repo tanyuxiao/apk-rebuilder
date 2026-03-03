@@ -1,6 +1,5 @@
 services:
   apk-modder:
-    platform: ${APK_MODDER_PLATFORM:-linux/amd64}
     build:
       context: .
       dockerfile: Dockerfile
@@ -16,7 +15,6 @@ services:
     ports:
       - '3000:3000'
     volumes:
-      # Persist app runtime data in a Docker named volume (faster than macOS bind mount for many small files)
       - apk_modder_data:/app/data
     environment:
       - NODE_ENV=production

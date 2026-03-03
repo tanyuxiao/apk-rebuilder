@@ -1,14 +1,12 @@
 # dependencies
 node_modules/
 .pnpm-store/
-packages/*/node_modules/
 
 # build outputs
-packages/*/dist/
-packages/frontend/.vite/
+dist/
+*.tsbuildinfo
 
 # runtime data
-packages/backend/data/
 data/
 builds/
 delivery-*/
