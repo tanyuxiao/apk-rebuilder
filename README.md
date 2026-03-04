@@ -1,6 +1,6 @@
-# APK Modder (Backend + Static UI)
+# APK Modder (FastAPI + Static UI)
 
-这是一个后端单仓版本：Node/Express + TypeScript，前端为 `public/` 下静态页面（无需单独前端工程）。
+这是一个后端单仓版本：`Python + FastAPI`，前端为 `public/` 下静态页面（无需单独前端工程）。
 
 ## 一键启动（推荐）
 
@@ -22,9 +22,9 @@ docker compose up -d --build
 
 ## 项目结构
 
-- `src/`: 后端源码
+- `app/`: FastAPI 后端源码
+- `main.py`: FastAPI 启动入口
 - `public/`: 静态前端页面
-- `tests/`: 后端测试
 - `Dockerfile`: 生产镜像构建
 - `docker-compose.yml`: 本地/部署启动
 
@@ -35,25 +35,19 @@ docker compose up -d --build
 - `GET /api/tools`
 - `POST /api/upload`
 - `POST /api/mod` (可选 API Key)
-- `GET /api/status/:id`
+- `GET /api/status/{id}`
 - `GET /api/tasks`
-- `GET /api/icon/:id`
-- `GET /api/download/:id` (可选 API Key)
-- `GET /api/unity-config/:id`
+- `GET /api/icon/{id}`
+- `GET /api/download/{id}` (可选 API Key)
+- `GET /api/unity-config/{id}`
 
 ## 本地开发
 
 ```bash
-pnpm install
-pnpm dev
-```
-
-## 质量检查
-
-```bash
-pnpm lint
-pnpm test
-pnpm typecheck
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --host 127.0.0.1 --port 3000
 ```
 
 ## 鉴权
@@ -62,7 +56,7 @@ pnpm typecheck
 
 需要鉴权的接口：
 - `POST /api/mod`
-- `GET /api/download/:id`
+- `GET /api/download/{id}`
 
 可通过以下方式传 token：
 - `Authorization: Bearer <API_KEY>`

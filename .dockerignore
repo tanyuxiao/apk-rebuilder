@@ -1,9 +1,8 @@
-node_modules
-.pnpm-store
-dist
-tests
 .git
 .gitignore
 .DS_Store
 *.log
 data
+.venv
+__pycache__
+*.pyc

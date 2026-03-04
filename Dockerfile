@@ -1,13 +1,9 @@
-ARG NODE_BUILD_IMAGE=docker.m.daocloud.io/library/node:20-bookworm
-ARG NODE_RUNTIME_IMAGE=docker.m.daocloud.io/library/node:20-bookworm-slim
+ARG PYTHON_BUILD_IMAGE=python:3.12-bookworm
+ARG PYTHON_RUNTIME_IMAGE=python:3.12-slim-bookworm
 
-FROM ${NODE_BUILD_IMAGE} AS build
+FROM ${PYTHON_BUILD_IMAGE} AS build
 WORKDIR /app
-
-ENV PNPM_HOME=/pnpm
-ENV PATH=$PNPM_HOME:$PATH
-
-RUN corepack enable && corepack prepare pnpm@10.20.0 --activate
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 
 ARG APKTOOL_VERSION=2.11.1
 ARG APKTOOL_JAR_URL=https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar
@@ -16,13 +12,8 @@ ARG JDK_URL_AMD64=https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/
 ARG JDK_URL_ARM64=https://api.adoptium.net/v3/binary/latest/17/ga/linux/aarch64/jdk/hotspot/normal/eclipse
 ARG TARGETARCH
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
-
-COPY src ./src
-COPY public ./public
-COPY tsconfig.json ./tsconfig.json
-RUN pnpm build && pnpm prune --prod
+COPY requirements.txt ./requirements.txt
+RUN python -m venv /opt/venv && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 RUN set -eux; \
   case "${TARGETARCH}" in \
@@ -31,43 +22,29 @@ RUN set -eux; \
     *) echo "Unsupported TARGETARCH: ${TARGETARCH}"; exit 1 ;; \
   esac; \
   mkdir -p /opt/tooling; \
-  export APKTOOL_JAR_URL ANDROID_BUILD_TOOLS_URL JDK_URL="${jdk_url}"; \
-  node -e ' \
-    const fs = require("fs"); \
-    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)); \
-    async function download(url, out) { \
-      let lastError; \
-      for (let i = 1; i <= 6; i++) { \
-        try { \
-          const res = await fetch(url, { redirect: "follow" }); \
-          if (!res.ok) throw new Error(`HTTP ${res.status} ${url}`); \
-          const buf = Buffer.from(await res.arrayBuffer()); \
-          fs.writeFileSync(out, buf); \
-          return; \
-        } catch (err) { \
-          lastError = err; \
-          if (i < 6) await wait(i * 2000); \
-        } \
-      } \
-      throw lastError; \
-    } \
-    (async () => { \
-      await download(process.env.APKTOOL_JAR_URL, "/opt/tooling/apktool.jar"); \
-      await download(process.env.ANDROID_BUILD_TOOLS_URL, "/opt/tooling/build-tools.zip"); \
-      await download(process.env.JDK_URL, "/opt/tooling/jdk.tar.gz"); \
-    })().catch((err) => { \
-      console.error(String(err)); \
-      process.exit(1); \
-    }); \
-  '
+  for i in 1 2 3 4 5 6; do \
+    curl -fsSL --retry 3 --retry-delay 2 "${APKTOOL_JAR_URL}" -o /opt/tooling/apktool.jar && break || test "$i" -eq 6; \
+    sleep $((i * 2)); \
+  done; \
+  for i in 1 2 3 4 5 6; do \
+    curl -fsSL --retry 3 --retry-delay 2 "${ANDROID_BUILD_TOOLS_URL}" -o /opt/tooling/build-tools.zip && break || test "$i" -eq 6; \
+    sleep $((i * 2)); \
+  done; \
+  for i in 1 2 3 4 5 6; do \
+    curl -fsSL --retry 3 --retry-delay 2 "${jdk_url}" -o /opt/tooling/jdk.tar.gz && break || test "$i" -eq 6; \
+    sleep $((i * 2)); \
+  done
 
-FROM ${NODE_RUNTIME_IMAGE} AS runtime
+FROM ${PYTHON_RUNTIME_IMAGE} AS runtime
 WORKDIR /app
 
 ARG ANDROID_BUILD_TOOLS_VERSION=34.0.0
 COPY --from=build /opt/tooling/apktool.jar /opt/apktool/apktool.jar
 COPY --from=build /opt/tooling/build-tools.zip /tmp/build-tools.zip
 COPY --from=build /opt/tooling/jdk.tar.gz /tmp/jdk.tar.gz
+COPY --from=build /opt/venv /opt/venv
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
   mkdir -p /opt/java/openjdk; \
@@ -91,13 +68,12 @@ ENV APKTOOL_PATH=/usr/local/bin/apktool
 ENV ZIPALIGN_PATH=/usr/local/bin/zipalign
 ENV APKSIGNER_PATH=/usr/local/bin/apksigner
 ENV JAVA_HOME=/opt/java/openjdk
-ENV PATH=/opt/java/openjdk/bin:$PATH
+ENV PATH=/opt/venv/bin:/opt/java/openjdk/bin:$PATH
 ENV HOST=0.0.0.0
 
-COPY --from=build /app/package.json /app/package.json
-COPY --from=build /app/node_modules /app/node_modules
-COPY --from=build /app/dist /app/dist
-COPY --from=build /app/public /app/public
+COPY app ./app
+COPY public ./public
+COPY main.py ./main.py
 
 EXPOSE 3000
-CMD ["node", "dist/index.js"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000"]

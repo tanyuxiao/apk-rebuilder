@@ -1,10 +1,7 @@
 # dependencies
-node_modules/
-.pnpm-store/
-
-# build outputs
-dist/
-*.tsbuildinfo
+.venv/
+__pycache__/
+*.pyc
 
 # runtime data
 data/
