@@ -1,6 +1,6 @@
-# APK Modder (FastAPI + Static UI)
+# APK Modder (Express + TypeScript + Static UI)
 
-这是一个后端单仓版本：`Python + FastAPI`，前端为 `public/` 下静态页面（无需单独前端工程）。
+这是一个后端单仓版本：`Node.js + Express + TypeScript`，前端为 `public/` 下静态页面（无需单独前端工程）。
 
 ## 一键启动（推荐）
 
@@ -22,8 +22,7 @@ docker compose up -d --build
 
 ## 项目结构
 
-- `app/`: FastAPI 后端源码
-- `main.py`: FastAPI 启动入口
+- `src/`: Express + TypeScript 后端源码
 - `public/`: 静态前端页面
 - `Dockerfile`: 生产镜像构建
 - `docker-compose.yml`: 本地/部署启动
@@ -31,23 +30,33 @@ docker compose up -d --build
 ## 后端接口
 
 - `GET /health`
-- `GET /api-docs`
 - `GET /api/tools`
 - `POST /api/upload`
+- `GET /api/library/apks`
+- `POST /api/library/use`
+- `DELETE /api/library/apks/:id`
 - `POST /api/mod` (可选 API Key)
-- `GET /api/status/{id}`
+- `GET /api/status/:id`
 - `GET /api/tasks`
-- `GET /api/icon/{id}`
-- `GET /api/download/{id}` (可选 API Key)
-- `GET /api/unity-config/{id}`
+- `GET /api/icon/:id`
+- `GET /api/unity-config/:id`
+- `GET /api/edit-file/:id`
+- `GET /api/files/:id/tree`
+- `GET /api/files/:id/content`
+- `GET /api/download/:id` (可选 API Key)
 
 ## 本地开发
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --host 127.0.0.1 --port 3000
+npm install
+npm run dev
+```
+
+## 构建和运行
+
+```bash
+npm run build
+npm start
 ```
 
 ## 鉴权
@@ -56,7 +65,7 @@ uvicorn main:app --reload --host 127.0.0.1 --port 3000
 
 需要鉴权的接口：
 - `POST /api/mod`
-- `GET /api/download/{id}`
+- `GET /api/download/:id`
 
 可通过以下方式传 token：
 - `Authorization: Bearer <API_KEY>`
@@ -67,9 +76,9 @@ uvicorn main:app --reload --host 127.0.0.1 --port 3000
 
 - `PORT` 默认 `3000`
 - `HOST` 默认 `127.0.0.1`
-- `APKTOOL_PATH` 默认 `/usr/local/bin/apktool`（容器）
-- `ZIPALIGN_PATH` 默认 `/usr/local/bin/zipalign`（容器）
-- `APKSIGNER_PATH` 默认 `/usr/local/bin/apksigner`（容器）
+- `APKTOOL_PATH` 默认 `apktool`
+- `ZIPALIGN_PATH` 默认自动探测 Android build-tools 中的 `zipalign`
+- `APKSIGNER_PATH` 默认自动探测 Android build-tools 中的 `apksigner`
 - `KEYTOOL_PATH` 默认 `keytool`
 - `DEBUG_KEY_ALIAS` 默认 `androiddebugkey`
 - `DEBUG_KEY_PASS` 默认 `android`
