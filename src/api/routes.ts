@@ -100,9 +100,9 @@ export function createApiRouter(): Router {
   }
 
   router.get('/health', (_req, res) => ok(res, { ok: true, service: 'backend' }));
-  router.get('/api/tools', (_req, res) => ok(res, getToolchainStatus()));
+  router.get('/tools', (_req, res) => ok(res, getToolchainStatus()));
 
-  router.post('/api/upload', upload.single('apk'), (req, res) => {
+  router.post('/upload', upload.single('apk'), (req, res) => {
     if (!req.file) {
       fail(res, 400, 'Missing apk file field "apk"', 'BAD_REQUEST');
       return;
@@ -112,9 +112,9 @@ export function createApiRouter(): Router {
     ok(res, { ...startTaskFromLibraryItem(item, tenantId), deduplicatedUpload: !created });
   });
 
-  router.get('/api/library/apks', (_req, res) => ok(res, { items: listApkItems() }));
+  router.get('/library/apks', (_req, res) => ok(res, { items: listApkItems() }));
 
-  router.post('/api/library/use', (req, res) => {
+  router.post('/library/use', (req, res) => {
     const itemId = String(req.body?.id || '').trim();
     const tenantId = req.header('x-tenant-id');
     if (!itemId) {
@@ -129,7 +129,7 @@ export function createApiRouter(): Router {
     ok(res, startTaskFromLibraryItem(item, tenantId));
   });
 
-  router.delete('/api/library/apks/:itemId', (req, res) => {
+  router.delete('/library/apks/:itemId', (req, res) => {
     if (!deleteApkItem(req.params['itemId'])) {
       fail(res, 404, 'APK not found in library', 'NOT_FOUND');
       return;
@@ -137,7 +137,7 @@ export function createApiRouter(): Router {
     ok(res, { deleted: true, id: req.params['itemId'] });
   });
 
-  router.get('/api/status/:taskId', (req, res) => {
+  router.get('/status/:taskId', (req, res) => {
     const task = getTask(req.params['taskId']);
     if (!task) {
       fail(res, 404, 'Task not found', 'NOT_FOUND');
@@ -155,7 +155,7 @@ export function createApiRouter(): Router {
     });
   });
 
-  router.get('/api/tasks', (_req, res) => {
+  router.get('/tasks', (_req, res) => {
     ok(res, {
       items: listTasks().map(task => ({
         id: task.id,
@@ -170,7 +170,7 @@ export function createApiRouter(): Router {
     });
   });
 
-  router.get('/api/icon/:taskId', (req, res) => {
+  router.get('/icon/:taskId', (req, res) => {
     const task = getTask(req.params['taskId']);
     if (!task?.iconFilePath || !fs.existsSync(task.iconFilePath)) {
       fail(res, 404, 'Icon not found', 'NOT_FOUND');
@@ -179,7 +179,7 @@ export function createApiRouter(): Router {
     res.sendFile(task.iconFilePath);
   });
 
-  router.get('/api/unity-config/:taskId', (req, res) => {
+  router.get('/unity-config/:taskId', (req, res) => {
     const task = getTask(req.params['taskId']);
     if (!task) {
       fail(res, 404, 'Task not found', 'NOT_FOUND');
@@ -192,7 +192,7 @@ export function createApiRouter(): Router {
     }
   });
 
-  router.get('/api/edit-file/:taskId', (req, res) => {
+  router.get('/edit-file/:taskId', (req, res) => {
     const task = getTask(req.params['taskId']);
     if (!task) {
       fail(res, 404, 'Task not found', 'NOT_FOUND');
@@ -205,7 +205,7 @@ export function createApiRouter(): Router {
     }
   });
 
-  router.get('/api/files/:taskId/tree', (req, res) => {
+  router.get('/files/:taskId/tree', (req, res) => {
     try {
       const decodedRoot = getDecodedRootOrThrow(req.params['taskId']);
       ok(res, { taskId: req.params['taskId'], rootName: path.basename(decodedRoot), tree: buildTreeNode(decodedRoot, decodedRoot, { count: 0 }) });
@@ -214,7 +214,7 @@ export function createApiRouter(): Router {
     }
   });
 
-  router.get('/api/files/:taskId/content', (req, res) => {
+  router.get('/files/:taskId/content', (req, res) => {
     try {
       const decodedRoot = getDecodedRootOrThrow(req.params['taskId']);
       const filePath = safeJoinDecoded(decodedRoot, String(req.query['path'] || ''));
@@ -264,7 +264,7 @@ export function createApiRouter(): Router {
     }
   });
 
-  router.post('/api/mod', requireAuth, modUpload.single('icon'), (req, res) => {
+  router.post('/mod', requireAuth, modUpload.single('icon'), (req, res) => {
     const taskId = String(req.body?.id || '').trim();
     if (!taskId) {
       fail(res, 400, 'Missing task id', 'BAD_REQUEST');
@@ -294,12 +294,6 @@ export function createApiRouter(): Router {
       return;
     }
 
-    let iconUploadPath: string | undefined;
-    if (req.file) {
-      const fileName = randomUUID() + path.extname(req.file.originalname || '');
-      iconUploadPath = path.join(MOD_UPLOAD_DIR, fileName);
-      fs.writeFileSync(iconUploadPath, req.file.buffer);
-    }
 
     let iconUploadPath: string | undefined;
     if (req.file) {
@@ -347,7 +341,7 @@ export function createApiRouter(): Router {
     ok(res, { taskId });
   });
 
-  router.get('/api/download/:taskId', requireAuth, (req, res) => {
+  router.get('/download/:taskId', requireAuth, (req, res) => {
     const task = getTask(String(req.params['taskId']));
     if (!task) {
       fail(res, 404, 'Task not found', 'NOT_FOUND');

@@ -24,7 +24,9 @@ docker compose up -d --build
 
 - `src/`: Express + TypeScript 后端源码
   - `src/plugin/`: 插件相关路由、认证、辅助函数（这是插件的核心）
-  - `src/api/`: 可选的本地 UI/调试接口实现，将 `/api/*` 路由集合到一起，宿主平台无需包含这部分
+  - `src/api/`: 可选的本地 UI/调试接口实现。
+    在本仓库中，这些路由被挂载到 `/api` 前缀下，因此前端可以直接访问 `/api/upload`, `/api/status/:id` 等。
+    如果将本项目作为后端插件嵌入宿主平台，可以忽略该前缀，路由自身在 `createApiRouter()` 内部定义为 `/upload`, `/status/:id` 等。
   - `src/common/`: 公共工具函数（响应格式、任务处理等）
   - `src/middleware/`: 中间件（例如 `requireAuth`）
 - `public/`: 静态前端页面（仅供本仓库内的调试界面使用）
@@ -48,6 +50,8 @@ docker compose up -d --build
 - `GET /api/files/:id/tree`
 - `GET /api/files/:id/content`
 - `GET /api/download/:id` (可选 API Key)
+
+> **注意**: 上述路径是指向运行在此仓库编译出的服务器且附带 `/api` 前缀的情况；如果你在其他宿主应用中挂载路由，可直接使用去掉 `api` 前缀的版本，例如 `/upload`、`/status/:id` 等。
 
 ## 插件接口
 
