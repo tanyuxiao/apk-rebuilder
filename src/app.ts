@@ -24,12 +24,28 @@ import { getToolchainStatus } from './toolchain';
 import { readUnityConfig, parseUnityPatchesInput } from './unityConfigService';
 import { ApkInfo, ApkLibraryItem, ModPayload, Task } from './types';
 import { normalizeRelPath, toSafeFileStem } from './validators';
+import { createPluginRouter } from './pluginRoutes';
+
+import rateLimit from 'express-rate-limit';
+import './taskQueue'; // Initialize BullMQ worker
+import { modQueue } from './taskQueue';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const modUpload = multer({ storage: multer.memoryStorage() });
 const app = express();
 const MAX_TREE_NODES = 5000;
 const MAX_FILE_READ_BYTES = 512 * 1024;
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { success: false, error: { message: 'Too many requests, please try again later.', code: 'RATE_LIMIT_EXCEEDED' } },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', apiLimiter);
+app.use('/plugin', apiLimiter);
 
 ensureRuntimeDirs();
 
@@ -69,10 +85,6 @@ function requireAuth(req: Request, res: Response, next: NextFunction): void {
     return;
   }
   next();
-}
-
-function runInBackground(fn: () => Promise<void>): void {
-  void fn().catch(error => console.error(error));
 }
 
 function getDecodedRootOrThrow(taskId: string): string {
@@ -164,11 +176,11 @@ function attachCachedIconForTask(task: Task): Task {
   return updateTask(task);
 }
 
-function startTaskFromLibraryItem(item: ApkLibraryItem): Record<string, unknown> {
+function startTaskFromLibraryItem(item: ApkLibraryItem, tenantId?: string): Record<string, unknown> {
   if (!fs.existsSync(item.filePath)) {
     throw new Error('APK file is missing from storage');
   }
-  const task = createTask(item.filePath, item.name || path.basename(item.filePath), item.id);
+  const task = createTask(item.filePath, item.name || path.basename(item.filePath), item.id, tenantId);
   const touched = touchApkItem(item.id);
   const activeItem = touched || item;
   const cacheHit = Boolean(activeItem.parsedReady && activeItem.decodeCachePath && fs.existsSync(activeItem.decodeCachePath));
@@ -187,7 +199,7 @@ function startTaskFromLibraryItem(item: ApkLibraryItem): Record<string, unknown>
     task.status = 'success';
     logTask(task, 'Loaded decoded cache from APK library (skip decompile)');
   } else {
-    runInBackground(() => runDecompileTask(task));
+    void modQueue.add('apk-mod', { type: 'decompile', taskId: task.id });
   }
 
   return {
@@ -207,14 +219,16 @@ app.post('/api/upload', upload.single('apk'), (req, res) => {
     fail(res, 400, 'Missing apk file field "apk"', 'BAD_REQUEST');
     return;
   }
+  const tenantId = req.header('x-tenant-id');
   const { item, created } = addOrGetApkItem(req.file.originalname || 'uploaded.apk', req.file.buffer);
-  ok(res, { ...startTaskFromLibraryItem(item), deduplicatedUpload: !created });
+  ok(res, { ...startTaskFromLibraryItem(item, tenantId), deduplicatedUpload: !created });
 });
 
 app.get('/api/library/apks', (_req, res) => ok(res, { items: listApkItems() }));
 
 app.post('/api/library/use', (req, res) => {
   const itemId = String(req.body?.id || '').trim();
+  const tenantId = req.header('x-tenant-id');
   if (!itemId) {
     fail(res, 400, 'Missing apk library id', 'BAD_REQUEST');
     return;
@@ -224,7 +238,7 @@ app.post('/api/library/use', (req, res) => {
     fail(res, 404, 'APK not found in library', 'NOT_FOUND');
     return;
   }
-  ok(res, startTaskFromLibraryItem(item));
+  ok(res, startTaskFromLibraryItem(item, tenantId));
 });
 
 app.delete('/api/library/apks/:itemId', (req, res) => {
@@ -422,7 +436,7 @@ app.post('/api/mod', requireAuth, modUpload.single('icon'), (req, res) => {
 
   task.logs.push('');
   logTask(task, 'Queue mod workflow');
-  runInBackground(() => runModTask(task, payload));
+  void modQueue.add('apk-mod', { type: 'mod', taskId: task.id, payload });
   ok(res, { id: task.id, status: task.status });
 });
 
@@ -440,6 +454,8 @@ app.get('/api/download/:taskId', requireAuth, (req, res) => {
   const stem = appName ? toSafeFileStem(appName) : `modded-${task.id}`;
   res.download(task.signedApkPath, `${stem}.apk`);
 });
+
+app.use('/plugin', createPluginRouter());
 
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {

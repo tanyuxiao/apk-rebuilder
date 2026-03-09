@@ -45,6 +45,20 @@ docker compose up -d --build
 - `GET /api/files/:id/content`
 - `GET /api/download/:id` (可选 API Key)
 
+## 插件接口
+
+`apk-modder` 现已支持作为 `backend-only` 插件被主平台调用，标准入口如下：
+
+- `GET /plugin/manifest`
+- `POST /plugin/execute`
+- `GET /plugin/runs/:runId`
+- `GET /plugin/artifacts/:artifactId`
+
+说明：
+- `/plugin/*` 使用插件 token 鉴权，不复用旧的 `API_KEY`。
+- `/api/*` 仍保留用于旧页面和本地调试，但不再是主平台正式集成入口。
+- 默认内置本地 artifact 存储兼容层；若主平台后续提供独立 artifact service，可继续替换实现而不改插件 API。
+
 ## 本地开发
 
 ```bash
@@ -71,6 +85,9 @@ npm start
 - `Authorization: Bearer <API_KEY>`
 - `x-api-key: <API_KEY>`
 - `?api_key=<API_KEY>`
+
+插件接口额外支持：
+- `PLUGIN_TOKEN_SECRET`：用于校验 `/plugin/*` 的 HS256 Bearer token
 
 ## 环境变量
 

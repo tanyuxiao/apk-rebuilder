@@ -3,6 +3,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { TASK_INDEX_PATH, WORK_DIR_ROOT } from './config';
 import { Task } from './types';
+import { normalizeSafeSegment } from './validators';
 
 function readTasks(): Task[] {
   try {
@@ -33,18 +34,31 @@ function saveTask(nextTask: Task): Task {
   return nextTask;
 }
 
-export function createTask(filePath: string, originalName: string, libraryItemId?: string | null): Task {
+export function createTask(
+  filePath: string,
+  originalName: string,
+  libraryItemId?: string | null,
+  tenantId?: string,
+  userId?: string | null,
+): Task {
   const now = nowIso();
+  const taskId = randomUUID();
+  const safeTenantId = normalizeSafeSegment(tenantId || 'default');
   const task: Task = {
-    id: randomUUID(),
+    id: taskId,
     status: 'queued',
     filePath,
     sourceName: originalName,
-    workDir: path.join(WORK_DIR_ROOT, randomUUID()),
+    workDir: path.join(WORK_DIR_ROOT, safeTenantId, taskId),
     createdAt: now,
     updatedAt: now,
     logs: [],
     libraryItemId: libraryItemId || null,
+    tenantId: safeTenantId,
+    userId: userId || null,
+    errorCode: null,
+    outputArtifactId: null,
+    outputArtifactName: null,
   };
   logTask(task, `Uploaded file: ${originalName}`);
   return saveTask(task);
@@ -52,6 +66,11 @@ export function createTask(filePath: string, originalName: string, libraryItemId
 
 export function getTask(taskId: string): Task | undefined {
   return readTasks().find(task => task.id === taskId);
+}
+
+export function getTaskForTenant(taskId: string, tenantId?: string | null): Task | undefined {
+  const safeTenantId = normalizeSafeSegment(tenantId || 'default');
+  return readTasks().find(task => task.id === taskId && (task.tenantId || 'default') === safeTenantId);
 }
 
 export function listTasks(): Task[] {
@@ -68,8 +87,9 @@ export function logTask(task: Task, message: string): Task {
   return updateTask(task);
 }
 
-export function setTaskError(task: Task, error: unknown, prefix: string): Task {
+export function setTaskError(task: Task, error: unknown, prefix: string, code?: string): Task {
   task.status = 'failed';
   task.error = `${prefix}: ${String(error).replace(/[^\x09\x0A\x0D\x20-\uFFFF]/g, '')}`;
+  task.errorCode = code || task.errorCode || 'TASK_FAILED';
   return logTask(task, task.error);
 }

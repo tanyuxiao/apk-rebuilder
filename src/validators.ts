@@ -22,3 +22,13 @@ export function normalizeRelPath(rawPath: string): string {
   }
   return parts.join('/');
 }
+
+export function normalizeSafeSegment(rawValue: string, fallback = 'default'): string {
+  const normalized = (rawValue || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+  return normalized || fallback;
+}

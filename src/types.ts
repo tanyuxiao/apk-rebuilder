@@ -23,6 +23,7 @@ export interface FilePatch {
   replaceText?: string | null;
   regex?: boolean;
   replacementBase64?: string | null;
+  replacementArtifactId?: string | null;
 }
 
 export interface ModPayload {
@@ -38,6 +39,8 @@ export interface ModPayload {
 
 export interface Task {
   id: string;
+  tenantId?: string;
+  userId?: string | null;
   status: TaskStatus;
   filePath: string;
   sourceName: string;
@@ -46,6 +49,7 @@ export interface Task {
   updatedAt: string;
   logs: string[];
   error?: string | null;
+  errorCode?: string | null;
   decodedDir?: string | null;
   unsignedApkPath?: string | null;
   alignedApkPath?: string | null;
@@ -53,6 +57,8 @@ export interface Task {
   iconFilePath?: string | null;
   apkInfo?: ApkInfo | null;
   libraryItemId?: string | null;
+  outputArtifactId?: string | null;
+  outputArtifactName?: string | null;
 }
 
 export interface ApkLibraryItem {

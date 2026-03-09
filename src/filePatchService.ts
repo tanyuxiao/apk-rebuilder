@@ -132,6 +132,7 @@ export function parseFilePatchesInput(raw: unknown): FilePatch[] {
       replaceText: typeof patch['replaceText'] === 'string' ? patch['replaceText'] : null,
       regex: Boolean(patch['regex']),
       replacementBase64: typeof patch['replacementBase64'] === 'string' ? patch['replacementBase64'] : null,
+      replacementArtifactId: typeof patch['replacementArtifactId'] === 'string' ? patch['replacementArtifactId'] : null,
     };
     if (result.mode === 'direct_edit' && result.content == null) {
       throw new Error(`filePatches[${index}].content is required for direct_edit`);
@@ -139,8 +140,8 @@ export function parseFilePatchesInput(raw: unknown): FilePatch[] {
     if (result.mode === 'text_replace' && (result.matchText == null || result.replaceText == null)) {
       throw new Error(`filePatches[${index}].matchText and replaceText are required for text_replace`);
     }
-    if (result.mode === 'file_replace' && !result.replacementBase64) {
-      throw new Error(`filePatches[${index}].replacementBase64 is required for file_replace`);
+    if (result.mode === 'file_replace' && !result.replacementBase64 && !result.replacementArtifactId) {
+      throw new Error(`filePatches[${index}].replacementBase64 or replacementArtifactId is required for file_replace`);
     }
     return result;
   });

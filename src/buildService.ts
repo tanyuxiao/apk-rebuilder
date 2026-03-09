@@ -66,6 +66,7 @@ function tryZipalign(task: Task, unsignedApkPath: string, alignedApkPath: string
 export async function runDecompileTask(task: Task): Promise<void> {
   task.status = 'processing';
   task.error = null;
+  task.errorCode = null;
   logTask(task, 'Start apktool decompile');
 
   const outDir = path.join(task.workDir, 'decoded');
@@ -82,13 +83,14 @@ export async function runDecompileTask(task: Task): Promise<void> {
     task.status = 'success';
     logTask(task, 'Decompile finished');
   } catch (error) {
-    setTaskError(task, error, 'Decompile failed');
+    setTaskError(task, error, 'Decompile failed', 'APK_DECOMPILE_FAILED');
   }
 }
 
 export async function runModTask(task: Task, payload: ModPayload): Promise<void> {
   task.status = 'processing';
   task.error = null;
+  task.errorCode = null;
   logTask(task, 'Start mod workflow');
 
   try {
@@ -100,7 +102,7 @@ export async function runModTask(task: Task, payload: ModPayload): Promise<void>
     applyUnityPatches(task, payload);
     applyFilePatches(task, payload);
   } catch (error) {
-    setTaskError(task, error, 'Manifest update failed');
+    setTaskError(task, error, 'Manifest update failed', 'APK_MOD_FAILED');
     return;
   }
 
@@ -142,6 +144,6 @@ export async function runModTask(task: Task, payload: ModPayload): Promise<void>
     task.status = 'success';
     logTask(task, 'Mod workflow finished');
   } catch (error) {
-    setTaskError(task, error, 'Mod workflow failed');
+    setTaskError(task, error, 'Mod workflow failed', 'APK_BUILD_FAILED');
   }
 }

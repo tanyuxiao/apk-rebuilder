@@ -24,7 +24,13 @@ RUN npm run build
 FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jre-headless unzip && rm -rf /var/lib/apt/lists/*
+# 安装运行时依赖
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  openjdk-17-jre-headless \
+  unzip \
+  ca-certificates \
+  curl \
+  && rm -rf /var/lib/apt/lists/*
 
 ARG ANDROID_BUILD_TOOLS_VERSION=34.0.0
 COPY --from=build /opt/tooling/apktool.jar /opt/apktool/apktool.jar
@@ -51,6 +57,7 @@ ENV ZIPALIGN_PATH=/usr/local/bin/zipalign
 ENV APKSIGNER_PATH=/usr/local/bin/apksigner
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV HOST=0.0.0.0
+ENV PORT=3000
 
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
