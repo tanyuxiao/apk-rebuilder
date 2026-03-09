@@ -1,5 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from 'fs';
+import path from 'path';
 
 function firstExistingPath(paths: string[]): string | undefined {
   return paths.find(item => fs.existsSync(item));
@@ -46,7 +46,7 @@ export const TASK_INDEX_PATH = path.join(DATA_ROOT, 'tasks.json');
 export const DEBUG_KEYSTORE_PATH = path.join(DATA_ROOT, 'debug.keystore');
 export const ARTIFACTS_DIR = path.join(DATA_ROOT, 'artifacts');
 export const ARTIFACT_INDEX_PATH = path.join(DATA_ROOT, 'artifacts.json');
-export const PLUGIN_MANIFEST_PATH = path.join(process.cwd(), 'plugin.manifest.json');
+export const PLUGIN_MANIFEST_PATH = path.join(process.cwd(), 'src', 'plugin', 'manifest.json');
 
 export const APKTOOL_PATH = process.env['APKTOOL_PATH'] || 'apktool';
 export const ZIPALIGN_PATH = process.env['ZIPALIGN_PATH'] || detectBuildTool('zipalign');

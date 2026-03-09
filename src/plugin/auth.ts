@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Request } from 'express';
-import { PLUGIN_ID, PLUGIN_TOKEN_SECRET } from './config';
-import { normalizeSafeSegment } from './validators';
+import { PLUGIN_ID, PLUGIN_TOKEN_SECRET } from '../config';
+import { normalizeSafeSegment } from '../validators';
 
 export type PluginPrincipal = {
   userId: string | null;

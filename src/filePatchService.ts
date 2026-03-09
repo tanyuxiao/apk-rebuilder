@@ -1,5 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from 'fs';
+import path from 'path';
 import { Buffer } from 'node:buffer';
 import { logTask } from './taskStore';
 import { FilePatch, ModPayload, Task } from './types';

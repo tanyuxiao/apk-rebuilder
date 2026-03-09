@@ -1,5 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from 'fs';
+import path from 'path';
 import { randomUUID } from 'node:crypto';
 import { ARTIFACT_INDEX_PATH, ARTIFACTS_DIR } from './config';
 import { nowIso } from './taskStore';
