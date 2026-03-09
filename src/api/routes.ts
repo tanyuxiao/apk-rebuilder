@@ -152,6 +152,7 @@ export function createApiRouter(): Router {
       error: task.error,
       downloadReady: Boolean(task.signedApkPath && task.status === 'success'),
       apkInfo: task.apkInfo || null,
+      logs: task.logs, // include logs for debugging
     });
   });
 
@@ -166,6 +167,7 @@ export function createApiRouter(): Router {
         error: task.error,
         downloadReady: Boolean(task.signedApkPath && task.status === 'success'),
         apkInfo: task.apkInfo || null,
+        logs: task.logs,
       })),
     });
   });

@@ -53,6 +53,16 @@ docker compose up -d --build
 
 > **注意**: 上述路径是指向运行在此仓库编译出的服务器且附带 `/api` 前缀的情况；如果你在其他宿主应用中挂载路由，可直接使用去掉 `api` 前缀的版本，例如 `/upload`、`/status/:id` 等。
 
+### 调试提示
+
+为了方便在开发或 CI 环境中无工具链测试，该服务会在无法调用 apktool/apksigner 时自动启用 **stub 模式**：
+
+- 上传任何文件都会跳过真实反编译，并生成一个包含 `<application/>` 的最小 `AndroidManifest.xml`。
+- 后续的修改/构建也会模拟完毕，日志中会出现 `Build tools unavailable, running stub mod flow` 和 `Stub mod workflow finished` 记录。
+- `downloadReady` 会变为 `true`，并可从 `/api/download/:id` 获取一个占位 APK。
+
+此外，当前版本已将任务日志 (`task.logs`) 加入到 `/api/status` 和 `/api/tasks` 返回值中，前端页面会显示它们并据此调整进度条。这样即便没有安装外部工具，也能完整演练上传、修改、构建流程。
+
 ## 插件接口
 
 本仓库本身只是 **一个独立的后端插件实现**，并不包含宿主框架。 在一个平台中可能会有多个类似插件，`apk-modder` 是其中之一，本项目演示了后端插件的最小结构。标准入口如下：
