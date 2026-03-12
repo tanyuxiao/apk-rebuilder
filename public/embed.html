@@ -1,0 +1,1196 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>APK Rebuilder - 嵌入版</title>
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --primary: #10b981;
+      --primary-dark: #0f9f6e;
+      --danger: #ef4444;
+      --radius: 10px;
+      --steps-line: #e2e8f0;
+      --dot: #cbd5e1;
+      --secondary: #475569;
+      --active: #0ea5e9;
+      --pre-bg: #0b1220;
+      --pre-text: #e2e8f0;
+      --file-btn-bg: #e0f2fe;
+      --file-btn-bg-hover: #bae6fd;
+      --file-btn-border: #e2e8f0;
+      --file-btn-border-hover: #38bdf8;
+      --file-btn-text: #0f172a;
+    }
+    body[data-mode="dark"] {
+      --bg: #0b0f17;
+      --panel: #101826;
+      --panel-2: #0f172a;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --line: #1f2937;
+      --primary: #34d399;
+      --primary-dark: #10b981;
+      --danger: #f87171;
+      --steps-line: #233043;
+      --dot: #334155;
+      --secondary: #334155;
+      --active: #38bdf8;
+      --pre-bg: #0a0f1a;
+      --pre-text: #d1d5db;
+      --file-btn-bg: #1f2937;
+      --file-btn-bg-hover: #273449;
+      --file-btn-border: #334155;
+      --file-btn-border-hover: #475569;
+      --file-btn-text: #e2e8f0;
+    }
+    body { margin:0; background: var(--bg); color: var(--text); }
+    #app { width:100%; height:100%; }
+    .container {
+      box-sizing: border-box;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 18px 18px 24px;
+      font-family: "SF Pro Text", "PingFang SC", "Noto Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 4px 0 14px;
+    }
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: var(--text);
+    }
+    .form-row {
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      letter-spacing: .2px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: var(--panel-2);
+      color: var(--text);
+    }
+    input[type="file"] {
+      font-size: 13px;
+      color: var(--muted);
+    }
+    input[type="file"]::file-selector-button {
+      padding: 7px 12px;
+      margin-right: 10px;
+      border: 1px solid var(--file-btn-border);
+      border-radius: 8px;
+      background: var(--file-btn-bg);
+      color: var(--file-btn-text);
+      cursor: pointer;
+      font-size: 13px;
+    }
+    input[type="file"]::file-selector-button:hover {
+      border-color: var(--file-btn-border-hover);
+      background: var(--file-btn-bg-hover);
+      color: var(--file-btn-text);
+    }
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #86efac;
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.18);
+    }
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .icon-preview {
+      margin-top: 10px;
+      width: 96px;
+      height: 96px;
+      border-radius: 16px;
+      border: 1px dashed var(--line);
+      background: var(--panel-2);
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .icon-preview:hover {
+      border-color: #86efac;
+      box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+    }
+    .icon-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .icon-empty {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .steps {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 8px;
+      position: relative;
+      padding: 6px 4px 0;
+    }
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 11px;
+      height: 2px;
+      background: var(--steps-line);
+      z-index: 0;
+    }
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      min-width: 72px;
+      z-index: 1;
+    }
+    .step .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--dot);
+    }
+    .step.active .dot {
+      background: #10b981;
+    }
+    .step.done .dot {
+      background: #22c55e;
+    }
+    .step.failed .dot {
+      background: #ef4444;
+    }
+    .progress-text {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    button, .btn {
+      padding: 9px 14px;
+      background: var(--primary);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+    button:hover, .btn:hover { background: var(--primary-dark); }
+    button:active, .btn:active { transform: translateY(1px); }
+    button.secondary {
+      background: var(--secondary);
+    }
+    button.active {
+      background: var(--active);
+    }
+    button.danger {
+      background: var(--danger);
+    }
+    button:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    pre {
+      margin-top: 12px;
+      background: var(--pre-bg);
+      color: var(--pre-text);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 80px;
+    }
+    #downloadArea {
+      margin-top: 8px;
+      display: flex;
+      justify-content: center;
+    }
+    @media (max-width: 680px) {
+      .container { padding: 14px; }
+      .form-row { padding: 10px; }
+      .actions { gap: 6px; }
+    }
+    .modal-mask {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-mask.open {
+      display: flex;
+    }
+    .modal-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      width: 560px;
+      max-width: 90vw;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #444;
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="iconEditorMask" class="modal-mask" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <strong>编辑图标</strong>
+        <button id="iconEditorCloseBtn" type="button" class="secondary">取消</button>
+      </div>
+      <div class="modal-body">
+        <canvas id="iconEditorCanvas" width="512" height="512" style="border:1px solid #e5e7eb;"></canvas>
+        <div class="slider-row">
+          <span>缩放</span>
+          <input id="iconScale" type="range" min="0.5" max="2.5" step="0.01" value="1" />
+        </div>
+        <div class="slider-row">
+          <span>X</span>
+          <input id="iconOffsetX" type="range" min="-220" max="220" step="1" value="0" />
+        </div>
+        <div class="slider-row">
+          <span>Y</span>
+          <input id="iconOffsetY" type="range" min="-220" max="220" step="1" value="0" />
+        </div>
+        <div class="modal-actions">
+          <button id="iconEditorResetBtn" type="button" class="secondary">重置</button>
+          <button id="iconEditorApplyBtn" type="button">应用图标</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // 嵌入页面专用逻辑
+    let token = '';
+    let initConfig = {};
+    let standardLibraryItemId = '';
+    let previousStandardLibraryItemId = '';
+    let isAdmin = false;
+    let tenantId = '';
+    const parentOrigin = window.location.ancestorOrigins?.[0] || '*';
+    const apiBase = window.location.pathname.startsWith('/apk-rebuilder/') ? '/apk-rebuilder' : '';
+    let locale = 'zh-CN';
+    let themeMode = 'light';
+    let themeName = '';
+
+    const I18N = {
+      'en': {
+        title: 'APK Info',
+        appName: 'App Name',
+        appPlaceholder: 'e.g. My App',
+        icon: 'Icon',
+        pickIcon: 'Choose Icon',
+        noIcon: 'No icon',
+        sceneId: 'Scene ID',
+        scenePlaceholder: 'e.g. 1001',
+        submit: 'Submit',
+        submitting: 'Submitting...',
+        processing: 'Processing',
+        success: 'Done',
+        failed: 'Failed',
+        download: 'Download APK',
+        adminTitle: 'Standard Package (Admin)',
+        currentStandard: 'Current Standard Package',
+        currentId: 'ID',
+        uploadStandard: 'Upload Standard APK',
+        uploadHint: 'Uploaded package will appear in the list below',
+        refresh: 'Refresh List',
+        history: 'History',
+        none: 'None',
+        setStandard: 'Set as Standard',
+        currentStandardBtn: 'In Use',
+        delete: 'Delete',
+        deleteConfirm: 'Click again to delete',
+        loading: 'Loading...',
+        noHistory: 'No packages',
+        uploadIconFailed: 'Icon upload failed',
+        uploadIconNonJson: 'Icon upload response is not JSON',
+        stepSubmit: 'Submitted',
+        stepProcessing: 'Processing',
+        stepDone: 'Done',
+      },
+      'zh-CN': {
+        title: 'APK信息',
+        appName: '应用名',
+        appPlaceholder: '例如：我的应用',
+        icon: '图标',
+        pickIcon: '选择图标文件',
+        noIcon: '暂无图标',
+        sceneId: '场景号',
+        scenePlaceholder: '例如：1001',
+        submit: '提交',
+        submitting: '提交中...',
+        processing: '处理中',
+        success: '完成',
+        failed: '失败',
+        download: '下载 APK',
+        adminTitle: '标准包管理（管理员）',
+        currentStandard: '当前标准包',
+        currentId: 'ID',
+        uploadStandard: '上传标准包 APK',
+        uploadHint: '上传后将出现在下方“历史标准包”列表中',
+        refresh: '刷新列表',
+        history: '历史标准包',
+        none: '暂无',
+        setStandard: '设为标准',
+        currentStandardBtn: '已使用',
+        delete: '删除',
+        deleteConfirm: '再次点击删除',
+        loading: '加载中...',
+        noHistory: '暂无历史标准包',
+        uploadIconFailed: '图标上传失败',
+        uploadIconNonJson: '图标上传响应非 JSON',
+        stepSubmit: '已提交',
+        stepProcessing: '处理中',
+        stepDone: '完成',
+      },
+      'zh-TW': {
+        title: 'APK資訊',
+        appName: '應用名',
+        appPlaceholder: '例如：我的應用',
+        icon: '圖示',
+        pickIcon: '選擇圖示檔案',
+        noIcon: '尚無圖示',
+        sceneId: '場景號',
+        scenePlaceholder: '例如：1001',
+        submit: '送出',
+        submitting: '送出中...',
+        processing: '處理中',
+        success: '完成',
+        failed: '失敗',
+        download: '下載 APK',
+        adminTitle: '標準包管理（管理員）',
+        currentStandard: '目前標準包',
+        currentId: 'ID',
+        uploadStandard: '上傳標準包 APK',
+        uploadHint: '上傳後將出現在下方「歷史標準包」列表中',
+        refresh: '重新整理列表',
+        history: '歷史標準包',
+        none: '無',
+        setStandard: '設為標準',
+        currentStandardBtn: '使用中',
+        delete: '刪除',
+        deleteConfirm: '再次點擊刪除',
+        loading: '載入中...',
+        noHistory: '尚無歷史標準包',
+        uploadIconFailed: '圖示上傳失敗',
+        uploadIconNonJson: '圖示上傳回應非 JSON',
+        stepSubmit: '已送出',
+        stepProcessing: '處理中',
+        stepDone: '完成',
+      },
+      'ja': {
+        title: 'APK情報',
+        appName: 'アプリ名',
+        appPlaceholder: '例：マイアプリ',
+        icon: 'アイコン',
+        pickIcon: 'アイコンを選択',
+        noIcon: 'アイコン未選択',
+        sceneId: 'シーン番号',
+        scenePlaceholder: '例：1001',
+        submit: '送信',
+        submitting: '送信中...',
+        processing: '処理中',
+        success: '完了',
+        failed: '失敗',
+        download: 'APK をダウンロード',
+        adminTitle: '標準パッケージ管理（管理者）',
+        currentStandard: '現在の標準パッケージ',
+        currentId: 'ID',
+        uploadStandard: '標準 APK をアップロード',
+        uploadHint: 'アップロード後に下の一覧へ表示されます',
+        refresh: '一覧を更新',
+        history: '履歴',
+        none: 'なし',
+        setStandard: '標準に設定',
+        currentStandardBtn: '使用中',
+        delete: '削除',
+        deleteConfirm: 'もう一度クリックして削除',
+        loading: '読み込み中...',
+        noHistory: '履歴がありません',
+        uploadIconFailed: 'アイコンのアップロードに失敗しました',
+        uploadIconNonJson: 'アイコンのレスポンスが JSON ではありません',
+        stepSubmit: '送信済み',
+        stepProcessing: '処理中',
+        stepDone: '完了',
+      },
+      'th': {
+        title: 'ข้อมูล APK',
+        appName: 'ชื่อแอป',
+        appPlaceholder: 'เช่น แอปของฉัน',
+        icon: 'ไอคอน',
+        pickIcon: 'เลือกไอคอน',
+        noIcon: 'ยังไม่มีไอคอน',
+        sceneId: 'หมายเลขฉาก',
+        scenePlaceholder: 'เช่น 1001',
+        submit: 'ส่ง',
+        submitting: 'กำลังส่ง...',
+        processing: 'กำลังประมวลผล',
+        success: 'เสร็จสิ้น',
+        failed: 'ล้มเหลว',
+        download: 'ดาวน์โหลด APK',
+        adminTitle: 'จัดการแพ็กเกจมาตรฐาน (ผู้ดูแล)',
+        currentStandard: 'แพ็กเกจมาตรฐานปัจจุบัน',
+        currentId: 'ID',
+        uploadStandard: 'อัปโหลด APK มาตรฐาน',
+        uploadHint: 'อัปโหลดแล้วจะแสดงในรายการด้านล่าง',
+        refresh: 'รีเฟรชรายการ',
+        history: 'ประวัติแพ็กเกจ',
+        none: 'ไม่มี',
+        setStandard: 'ตั้งเป็นมาตรฐาน',
+        currentStandardBtn: 'กำลังใช้',
+        delete: 'ลบ',
+        deleteConfirm: 'คลิกอีกครั้งเพื่อลบ',
+        loading: 'กำลังโหลด...',
+        noHistory: 'ยังไม่มีรายการ',
+        uploadIconFailed: 'อัปโหลดไอคอนล้มเหลว',
+        uploadIconNonJson: 'ผลลัพธ์ไอคอนไม่ใช่ JSON',
+        stepSubmit: 'ส่งแล้ว',
+        stepProcessing: 'กำลังประมวลผล',
+        stepDone: 'เสร็จสิ้น',
+      },
+    };
+
+    function resolveLocale(raw) {
+      const value = String(raw || '').toLowerCase();
+      if (value.startsWith('zh-tw') || value.startsWith('zh-hk')) return 'zh-TW';
+      if (value.startsWith('zh')) return 'zh-CN';
+      if (value.startsWith('ja')) return 'ja';
+      if (value.startsWith('th')) return 'th';
+      if (value.startsWith('en')) return 'en';
+      return 'zh-CN';
+    }
+
+    function t(key) {
+      const bundle = I18N[locale] || I18N['zh-CN'];
+      return bundle[key] || I18N['en'][key] || key;
+    }
+
+    function applyTheme(mode, name) {
+      const normalized = mode === 'dark' ? 'dark' : 'light';
+      document.body.setAttribute('data-mode', normalized);
+      if (name) {
+        document.body.setAttribute('data-theme', name);
+      }
+    }
+
+    window.addEventListener('message', (e) => {
+      const msg = e.data || {};
+      switch (msg.type) {
+        case 'INIT':
+          token = msg.payload?.token || '';
+          initConfig = msg.payload?.config || {};
+          standardLibraryItemId = initConfig.standardLibraryItemId || initConfig.standard_library_item_id || '';
+          previousStandardLibraryItemId =
+            initConfig.previousStandardLibraryItemId ||
+            initConfig.previous_standard_library_item_id ||
+            '';
+          tenantId = String(initConfig.tenantId || initConfig.tenant || '').trim();
+          locale = resolveLocale(initConfig.locale || initConfig.lang);
+          themeMode = String(initConfig.themeMode || initConfig.mode || '').toLowerCase();
+          themeName = String(initConfig.themeName || initConfig.theme || '').trim();
+          applyTheme(themeMode, themeName);
+          const roles = Array.isArray(initConfig.roles) ? initConfig.roles : [];
+          const role = initConfig.role || '';
+          isAdmin = roles.includes('admin') || roles.includes('root') || role === 'admin' || role === 'root';
+          console.info('[embed] role/roles', { role, roles, isAdmin });
+          parent.postMessage({ type:'PLUGIN_READY', id:`ready-${Date.now()}` }, e.origin);
+          refreshStandardPackage();
+          renderAdminSection();
+          renderStaticTexts();
+          break;
+        case 'PAUSE':
+          // Pause background activity if any
+          setStatus('已暂停');
+          break;
+        case 'RESUME':
+          setStatus('');
+          break;
+        case 'TOKEN_UPDATE':
+          token = msg.payload?.token || '';
+          break;
+        case 'LOCALE_UPDATE':
+          locale = resolveLocale(msg.payload?.locale || msg.payload?.lang);
+          renderStaticTexts();
+          renderAdminSection();
+          break;
+        case 'THEME_UPDATE':
+          themeMode = String(msg.payload?.themeMode || msg.payload?.mode || '').toLowerCase();
+          themeName = String(msg.payload?.themeName || msg.payload?.theme || '').trim();
+          applyTheme(themeMode, themeName);
+          break;
+        case 'DESTROY':
+          // 清理
+          break;
+      }
+    });
+
+    function withApiBase(url) {
+      if (!url) return url;
+      if (url.startsWith('http://') || url.startsWith('https://')) return url;
+      return `${apiBase}${url}`;
+    }
+
+    function authFetch(url, opts = {}) {
+      opts.headers = { ...(opts.headers||{}), Authorization: `Bearer ${token}` };
+      if (tenantId) {
+        opts.headers['X-Tenant-Id'] = tenantId;
+      }
+      return fetch(withApiBase(url), opts);
+    }
+
+    // Minimal embedded form (AppName / Icon / SceneId)
+    const appEl = document.getElementById('app');
+    appEl.innerHTML = `
+      <div class="container">
+        <div class="section">
+          <div class="title">${t('title')}</div>
+          <div class="form-row">
+            <label for="appName">${t('appName')}</label>
+            <input id="appName" type="text" placeholder="${t('appPlaceholder')}" />
+          </div>
+          <div class="form-row">
+            <label id="iconLabel">${t('icon')}</label>
+            <input id="appIconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" style="display:none" />
+            <div class="actions">
+              <button id="pickIconBtn" type="button">${t('pickIcon')}</button>
+              <span id="iconFileName" class="hint">${t('none')}</span>
+            </div>
+            <div id="iconPreview" class="icon-preview" title="点击重新编辑" role="button" tabindex="0">
+              <span class="icon-empty">${t('noIcon')}</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <label for="sceneId">${t('sceneId')}</label>
+            <input id="sceneId" type="text" placeholder="${t('scenePlaceholder')}" />
+          </div>
+          <div class="actions">
+            <button id="submitBtn">${t('submit')}</button>
+            <span id="status"></span>
+          </div>
+          <div class="steps" id="progressSteps">
+            <div class="step" data-step="submit"><span class="dot"></span><span class="label"></span></div>
+            <div class="step" data-step="processing"><span class="dot"></span><span class="label"></span></div>
+            <div class="step" data-step="done"><span class="dot"></span><span class="label"></span></div>
+          </div>
+          <div class="progress-text" id="progressText" style="display:none;"></div>
+          <div id="downloadArea" style="margin-top:8px;"></div>
+        </div>
+        <div id="adminSection"></div>
+      </div>
+    `;
+
+    const submitBtn = document.getElementById('submitBtn');
+    const statusEl = document.getElementById('status');
+    const progressStepsEl = document.getElementById('progressSteps');
+    const progressTextEl = document.getElementById('progressText');
+    const downloadAreaEl = document.getElementById('downloadArea');
+    const adminSectionEl = document.getElementById('adminSection');
+    const appIconFile = document.getElementById('appIconFile');
+    const pickIconBtn = document.getElementById('pickIconBtn');
+    const iconFileName = document.getElementById('iconFileName');
+    const iconPreview = document.getElementById('iconPreview');
+    let selectedIconFile = null;
+    let selectedIconUrl = '';
+    const iconEditorMask = document.getElementById('iconEditorMask');
+    const iconEditorCanvas = document.getElementById('iconEditorCanvas');
+    const iconEditorCloseBtn = document.getElementById('iconEditorCloseBtn');
+    const iconEditorApplyBtn = document.getElementById('iconEditorApplyBtn');
+    const iconEditorResetBtn = document.getElementById('iconEditorResetBtn');
+    const iconScaleEl = document.getElementById('iconScale');
+    const iconOffsetXEl = document.getElementById('iconOffsetX');
+    const iconOffsetYEl = document.getElementById('iconOffsetY');
+    const iconCtx = iconEditorCanvas?.getContext('2d') || null;
+    let iconSourceFile = null;
+    let iconImage = null;
+    let pollTimer = null;
+
+    function setStatus(text) {
+      statusEl.textContent = text || '';
+    }
+    function setProgress(step, text, failed = false) {
+      if (progressStepsEl) {
+        const steps = Array.from(progressStepsEl.querySelectorAll('.step'));
+        const order = ['submit', 'processing', 'done'];
+        const idx = order.indexOf(step);
+        steps.forEach((el, i) => {
+          el.classList.remove('active', 'done', 'failed');
+          if (idx >= 0 && i < idx) el.classList.add('done');
+          if (idx >= 0 && i === idx) el.classList.add(failed ? 'failed' : 'active');
+          const label = el.querySelector('.label');
+          if (label) {
+            const key = i === 0 ? 'stepSubmit' : i === 1 ? 'stepProcessing' : 'stepDone';
+            label.textContent = t(key);
+          }
+        });
+      }
+      if (progressTextEl) progressTextEl.textContent = text || '';
+    }
+    function setDownloadArea(html) {
+      if (downloadAreaEl) downloadAreaEl.innerHTML = html || '';
+    }
+
+    function setIconFileLabel(text) {
+      if (iconFileName) iconFileName.textContent = text || t('none');
+    }
+
+    function updateIconPreview() {
+      if (!iconPreview) return;
+      if (!selectedIconUrl) {
+        iconPreview.innerHTML = `<span class="icon-empty">${t('noIcon')}</span>`;
+        return;
+      }
+      iconPreview.innerHTML = `<img src="${selectedIconUrl}" alt="icon preview" />`;
+    }
+
+    function renderStaticTexts() {
+      const title = document.querySelector('.title');
+      if (title) title.textContent = t('title');
+      const appLabel = document.querySelector('label[for="appName"]');
+      if (appLabel) appLabel.textContent = t('appName');
+      const iconLabel = document.getElementById('iconLabel');
+      if (iconLabel) iconLabel.textContent = t('icon');
+      const sceneLabel = document.querySelector('label[for="sceneId"]');
+      if (sceneLabel) sceneLabel.textContent = t('sceneId');
+      const appInput = document.getElementById('appName');
+      if (appInput) appInput.setAttribute('placeholder', t('appPlaceholder'));
+      const sceneInput = document.getElementById('sceneId');
+      if (sceneInput) sceneInput.setAttribute('placeholder', t('scenePlaceholder'));
+      const submit = document.getElementById('submitBtn');
+      if (submit) submit.textContent = t('submit');
+      const pickBtn = document.getElementById('pickIconBtn');
+      if (pickBtn) pickBtn.textContent = t('pickIcon');
+      setIconFileLabel(selectedIconFile ? (selectedIconFile.name || '') : '');
+      updateIconPreview();
+      setProgress('idle', '');
+    }
+
+    function openIconEditor(file) {
+      if (!file || !iconEditorMask || !iconCtx || !iconEditorCanvas) return;
+      iconSourceFile = file;
+      iconImage = new Image();
+      const url = URL.createObjectURL(file);
+      iconImage.onload = () => {
+        URL.revokeObjectURL(url);
+        iconScaleEl.value = '1';
+        iconOffsetXEl.value = '0';
+        iconOffsetYEl.value = '0';
+        renderIconCanvas();
+        iconEditorMask.classList.add('open');
+      };
+      iconImage.onerror = () => {
+        URL.revokeObjectURL(url);
+        setStatus('图标文件无法读取');
+      };
+      iconImage.src = url;
+    }
+
+    function closeIconEditor() {
+      if (!iconEditorMask) return;
+      iconEditorMask.classList.remove('open');
+      iconImage = null;
+      iconSourceFile = null;
+    }
+
+    function renderIconCanvas() {
+      if (!iconCtx || !iconEditorCanvas || !iconImage) return;
+      const scale = Number(iconScaleEl.value || 1);
+      const offsetX = Number(iconOffsetXEl.value || 0);
+      const offsetY = Number(iconOffsetYEl.value || 0);
+      const cw = iconEditorCanvas.width;
+      const ch = iconEditorCanvas.height;
+      iconCtx.clearRect(0, 0, cw, ch);
+      iconCtx.fillStyle = '#ffffff';
+      iconCtx.fillRect(0, 0, cw, ch);
+      const iw = iconImage.width * scale;
+      const ih = iconImage.height * scale;
+      const x = (cw - iw) / 2 + offsetX;
+      const y = (ch - ih) / 2 + offsetY;
+      iconCtx.drawImage(iconImage, x, y, iw, ih);
+    }
+
+    function applyIconEditor() {
+      if (!iconEditorCanvas || !iconSourceFile) return;
+      iconEditorCanvas.toBlob((blob) => {
+        if (!blob) return;
+        const fileName = iconSourceFile.name || 'icon.png';
+        selectedIconFile = new File([blob], fileName, { type: 'image/png' });
+        setIconFileLabel(`${fileName}（已编辑）`);
+        if (selectedIconUrl) {
+          URL.revokeObjectURL(selectedIconUrl);
+        }
+        selectedIconUrl = URL.createObjectURL(selectedIconFile);
+        updateIconPreview();
+        closeIconEditor();
+      }, 'image/png');
+    }
+
+    pickIconBtn?.addEventListener('click', () => appIconFile?.click());
+    appIconFile?.addEventListener('change', () => {
+      const file = appIconFile.files?.[0] || null;
+      if (file) {
+        openIconEditor(file);
+      }
+      // allow re-select same file
+      appIconFile.value = '';
+    });
+    iconPreview?.addEventListener('click', () => {
+      if (selectedIconFile) {
+        openIconEditor(selectedIconFile);
+      } else {
+        appIconFile?.click();
+      }
+    });
+    iconPreview?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (selectedIconFile) {
+          openIconEditor(selectedIconFile);
+        } else {
+          appIconFile?.click();
+        }
+      }
+    });
+    iconEditorCloseBtn?.addEventListener('click', () => closeIconEditor());
+    iconEditorResetBtn?.addEventListener('click', () => {
+      if (!iconImage) return;
+      iconScaleEl.value = '1';
+      iconOffsetXEl.value = '0';
+      iconOffsetYEl.value = '0';
+      renderIconCanvas();
+    });
+    iconEditorApplyBtn?.addEventListener('click', () => applyIconEditor());
+    iconScaleEl?.addEventListener('input', renderIconCanvas);
+    iconOffsetXEl?.addEventListener('input', renderIconCanvas);
+    iconOffsetYEl?.addEventListener('input', renderIconCanvas);
+
+    async function pollRunStatus(runId) {
+      if (!runId) return;
+      const res = await authFetch(`/plugin/runs/${runId}`, { method: 'GET' });
+      const contentType = res.headers.get('content-type') || '';
+      const raw = await res.text();
+      if (!res.ok) {
+        throw new Error(`状态查询失败 ${res.status}: ${raw.slice(0, 200)}`);
+      }
+      if (!contentType.includes('application/json')) {
+        throw new Error(`状态查询响应非 JSON: ${raw.slice(0, 200)}`);
+      }
+      const json = JSON.parse(raw);
+      const data = json?.data || json;
+      const status = data?.status || '';
+      const progress = data?.progress;
+      const pctValue = typeof progress?.percent === 'number' ? progress.percent : null;
+      const pctLabel = pctValue !== null ? `${pctValue}%` : '';
+      setStatus(`${t('processing')} ${status}${pctLabel ? ` · ${pctLabel}` : ''}`);
+      setProgress(status === 'success' ? 'done' : 'processing', progress?.message || '');
+
+      const artifacts = Array.isArray(data?.artifacts) ? data.artifacts : [];
+      if (artifacts.length) {
+        const first = artifacts[0];
+        const tenantQuery = tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : '';
+        const url = withApiBase(`/plugin/artifacts/${first.artifactId}${tenantQuery}`);
+        const nameFromStatus = data?.apkInfo?.appName || '';
+        const nameFromInput = (document.getElementById('appName')?.value || '').trim();
+        const baseName = (nameFromStatus || nameFromInput || 'modded').replace(/[\\/:*?"<>|]/g, '').trim();
+        const downloadName = `${baseName || 'modded'}.apk`;
+        setDownloadArea(
+          `<a href="${url}" download="${downloadName}" class="btn" style="display:inline-block;padding:6px 12px;border-radius:6px;background:#16a34a;color:#fff;text-decoration:none;">${t('download')}</a>`
+        );
+        setStatus(t('success'));
+        setProgress('done', t('success'));
+        return true;
+      }
+
+      if (status === 'failed' || status === 'error') {
+        setStatus(t('failed'));
+        setProgress('processing', t('failed'), true);
+        return true;
+      }
+      return false;
+    }
+
+    function startPolling(runId) {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      pollTimer = setInterval(async () => {
+        try {
+          const done = await pollRunStatus(runId);
+          if (done) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        } catch (err) {
+          // keep polling but show error once
+          setStatus(`查询失败：${String(err).slice(0, 120)}`);
+        }
+      }, 2000);
+      // immediate check
+      void pollRunStatus(runId).catch(() => {});
+    }
+
+    async function uploadIconIfNeeded() {
+      if (!selectedIconFile) return null;
+      const form = new FormData();
+      form.append('icon', selectedIconFile);
+      const res = await authFetch('/plugin/icon-upload', { method: 'POST', body: form });
+      const contentType = res.headers.get('content-type') || '';
+      const raw = await res.text();
+      if (!res.ok) {
+        throw new Error(`图标上传失败 ${res.status}: ${raw.slice(0, 200)}`);
+      }
+      if (!contentType.includes('application/json')) {
+        throw new Error(`图标上传响应非 JSON: ${raw.slice(0, 200)}`);
+      }
+      const json = JSON.parse(raw);
+      const data = json?.data || json;
+      return data?.artifactId || null;
+    }
+
+    submitBtn.addEventListener('click', async () => {
+      const appName = document.getElementById('appName').value.trim();
+      const sceneId = document.getElementById('sceneId').value.trim();
+
+      if (!appName || !sceneId) {
+        setStatus(`${t('appName')}/${t('sceneId')} ${t('failed')}`);
+        return;
+      }
+      if (!standardLibraryItemId) {
+        setStatus(`${t('failed')}`);
+        return;
+      }
+
+      setStatus(t('submitting'));
+      submitBtn.disabled = true;
+      setProgress('submit', t('submitting'));
+      setDownloadArea('');
+
+      try {
+        const unityPatchValue = /^\d+$/.test(sceneId) ? Number(sceneId) : sceneId;
+        const iconArtifactId = await uploadIconIfNeeded();
+        const payload = {
+          input: {
+            source: { libraryItemId: standardLibraryItemId },
+            modifications: {
+              appName,
+              unityPatches: [{ path: 'sceneId', value: unityPatchValue }],
+              unityConfigPath: null,
+              iconArtifactId,
+            },
+            options: {
+              async: true,
+              reuseDecodedCache: true,
+              useStandardPackage: true,
+            },
+          },
+        };
+
+        const res = await authFetch('/plugin/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const text = await res.text();
+        if (!res.ok) {
+          setStatus(`${t('failed')} (${res.status})`);
+          setProgress('submit', t('failed'), true);
+          return;
+        }
+        setStatus(`${t('processing')}...`);
+        setProgress('processing', t('processing'));
+        try {
+          const json = JSON.parse(text);
+          const data = json?.data || json;
+          const runId = data?.runId || '';
+          if (runId) {
+            startPolling(runId);
+          }
+        } catch {
+          // non-json response
+        }
+      } catch (err) {
+        setStatus(t('failed'));
+        setProgress('submit', t('failed'), true);
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    async function refreshStandardPackage() {
+      try {
+        const res = await authFetch('/plugin/standard-package', { method: 'GET' });
+        const json = await res.json();
+        const data = json?.data || json;
+        standardLibraryItemId = data?.standardLibraryItemId || data?.standard_library_item_id || standardLibraryItemId;
+        previousStandardLibraryItemId =
+          data?.previousStandardLibraryItemId || data?.previous_standard_library_item_id || previousStandardLibraryItemId;
+      } catch (err) {
+        // ignore; admin section can still be used to set config
+      }
+    }
+
+    function renderAdminSection() {
+      if (!adminSectionEl) return;
+      if (!isAdmin) {
+        adminSectionEl.innerHTML = '';
+        return;
+      }
+
+      adminSectionEl.innerHTML = `
+        <div class="section">
+        <div class="section-title">${t('adminTitle')}</div>
+        <div class="form-row">
+          <label>${t('currentStandard')}</label>
+          <div class="hint">${t('currentId')}：<span id="currentStandardId">${standardLibraryItemId || '-'}</span></div>
+        </div>
+        <div class="form-row">
+          <label>${t('uploadStandard')}</label>
+          <input id="standardApkFile" type="file" accept=".apk" />
+          <div class="hint">${t('uploadHint')}</div>
+        </div>
+        <div class="form-row">
+          <label>${t('history')}</label>
+          <div id="standardList" class="hint">${t('loading')}</div>
+        </div>
+        <pre id="adminResult"></pre>
+        </div>
+      `;
+
+      const currentStandardIdEl = document.getElementById('currentStandardId');
+      const standardApkFile = document.getElementById('standardApkFile');
+      const standardListEl = document.getElementById('standardList');
+      const adminResult = document.getElementById('adminResult');
+
+      function setAdminResult(text) {
+        adminResult.textContent = text || '';
+      }
+
+      function setCurrentStandardId(value) {
+        if (currentStandardIdEl) currentStandardIdEl.textContent = value || '-';
+      }
+
+      async function refreshStandardList() {
+        if (!standardListEl) return;
+        standardListEl.textContent = t('loading');
+        try {
+          const res = await authFetch('/plugin/admin/apk-library', { method: 'GET' });
+          const contentType = res.headers.get('content-type') || '';
+          const raw = await res.text();
+          if (!contentType.includes('application/json')) {
+            throw new Error(raw.slice(0, 200));
+          }
+          const json = JSON.parse(raw);
+          const data = json?.data || json;
+          const items = Array.isArray(data?.items) ? data.items : [];
+          const standard = data?.standard || {};
+          const activeId = standard?.activeStandardId || standardLibraryItemId || '';
+          standardLibraryItemId = activeId || standardLibraryItemId;
+          setCurrentStandardId(activeId || '');
+
+          if (!items.length) {
+            standardListEl.textContent = t('noHistory');
+            return;
+          }
+
+          standardListEl.innerHTML = items.map(item => {
+            const isActive = item.id === activeId;
+            const isPrevious = item.id === (standard?.previousStandardId || previousStandardLibraryItemId);
+            return `
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+                <div style="display:flex; flex-direction:column; gap:2px;">
+                  <strong style="font-size:13px;">${item.name || 'uploaded.apk'}</strong>
+                  <span class="hint">ID: ${item.id}</span>
+                  <span class="hint">${item.createdAt || ''}</span>
+                  ${isActive ? '<span class="badge" style="background:#dcfce7;color:#166534;">当前</span>' : ''}
+                  ${isPrevious ? '<span class="badge" style="background:#fee2e2;color:#7f1d1d;">上一个</span>' : ''}
+                </div>
+                <div style="display:flex; gap:6px;">
+                  <button class="setStandardBtn ${isActive ? 'active' : ''}" data-id="${item.id}" type="button">
+                    ${isActive ? t('currentStandardBtn') : t('setStandard')}
+                  </button>
+                  <button class="deleteStandardBtn secondary" data-id="${item.id}" type="button">${t('delete')}</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        } catch (err) {
+          standardListEl.textContent = '加载失败';
+          setAdminResult(String(err));
+        }
+      }
+
+      standardApkFile?.addEventListener('change', async () => {
+        const file = standardApkFile.files?.[0];
+        if (!file) return;
+        const form = new FormData();
+        form.append('apk', file);
+        setAdminResult('上传中...');
+        try {
+          const headers = tenantId ? { 'X-Tenant-Id': tenantId } : undefined;
+          const res = await fetch(withApiBase('/api/upload'), { method: 'POST', body: form, headers });
+          const json = await res.json();
+          const libraryId = json?.data?.libraryItem?.id || json?.data?.libraryItemId || json?.data?.id;
+          if (libraryId) {
+            setAdminResult(`上传成功，libraryItemId=${libraryId}`);
+            await refreshStandardList();
+          } else {
+            setAdminResult(JSON.stringify(json, null, 2));
+          }
+        } catch (err) {
+          setAdminResult(String(err));
+        }
+      });
+
+      standardListEl?.addEventListener('click', async (evt) => {
+        const target = evt.target;
+        if (!(target instanceof HTMLElement)) return;
+        const setBtn = target.closest('.setStandardBtn');
+        const delBtn = target.closest('.deleteStandardBtn');
+        const id = (setBtn || delBtn)?.getAttribute('data-id') || '';
+        if (!id) return;
+
+        if (setBtn) {
+          setAdminResult('保存中...');
+          const doSave = async () => {
+            const res = await authFetch('/plugin/admin/standard-package', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                standardLibraryItemId: id,
+                previousStandardLibraryItemId: standardLibraryItemId || previousStandardLibraryItemId || null,
+              }),
+            });
+            const text = await res.text();
+            if (res.status === 409) {
+              // Locked, retry shortly
+              setAdminResult('标准包正在更新，稍后自动重试...');
+              setTimeout(() => {
+                doSave().catch((err) => setAdminResult(String(err)));
+              }, 1200);
+              return;
+            }
+            standardLibraryItemId = id;
+            setCurrentStandardId(id);
+            setAdminResult(text || '保存成功');
+            await refreshStandardList();
+          };
+          try {
+            await doSave();
+          } catch (err) {
+            setAdminResult(String(err));
+          }
+        }
+
+        if (delBtn) {
+          const now = Date.now();
+          const last = Number(delBtn.getAttribute('data-confirm') || '0');
+          if (!last || now - last > 4000) {
+            delBtn.setAttribute('data-confirm', String(now));
+            const prevText = delBtn.textContent || '删除';
+            delBtn.setAttribute('data-prev-text', prevText);
+            delBtn.textContent = t('deleteConfirm');
+            delBtn.classList.add('danger');
+            setTimeout(() => {
+              if (!delBtn.isConnected) return;
+              delBtn.textContent = delBtn.getAttribute('data-prev-text') || '删除';
+              delBtn.classList.remove('danger');
+              delBtn.removeAttribute('data-confirm');
+              delBtn.removeAttribute('data-prev-text');
+            }, 3500);
+            return;
+          }
+          setAdminResult('删除中...');
+          try {
+            const res = await authFetch(`/plugin/admin/apk-library/${id}`, { method: 'DELETE' });
+            const text = await res.text();
+            setAdminResult(text || '删除成功');
+            await refreshStandardList();
+          } catch (err) {
+            setAdminResult(String(err));
+          }
+        }
+      });
+
+      refreshStandardList();
+    }
+  </script>
+</body>
+</html>

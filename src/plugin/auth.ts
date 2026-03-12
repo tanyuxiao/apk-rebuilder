@@ -60,6 +60,14 @@ function normalizeScopes(value: unknown): string[] {
   return [];
 }
 
+function extractTenantId(req: Request): string | null {
+  const header = req.header('x-tenant-id') || '';
+  const query = String(req.query['tenantId'] || '').trim();
+  const raw = String(header || query).trim();
+  if (!raw) return null;
+  return normalizeSafeSegment(raw);
+}
+
 export function getPluginPrincipal(req: Request): PluginPrincipal {
   const token = extractBearerToken(req);
   const payload = verifyHs256(token);
@@ -89,5 +97,25 @@ export function getPluginPrincipal(req: Request): PluginPrincipal {
 export function requireScope(principal: PluginPrincipal, scope: string): void {
   if (!principal.scopes.includes(scope)) {
     throw new Error(`Missing required scope: ${scope}`);
+  }
+}
+
+/**
+ * Loose principal for accessToken-only mode.
+ * If plugin token verification fails, fall back to a permissive principal so
+ * frontend accessToken can still access plugin routes.
+ */
+export function getLoosePrincipal(req: Request): PluginPrincipal {
+  try {
+    return getPluginPrincipal(req);
+  } catch {
+    const fallbackTenantId = extractTenantId(req) || 'default';
+    return {
+      userId: null,
+      tenantId: fallbackTenantId,
+      pluginId: PLUGIN_ID,
+      scopes: ['apk.mod.run', 'apk.mod.read', 'apk.mod.admin'],
+      exp: null,
+    };
   }
 }

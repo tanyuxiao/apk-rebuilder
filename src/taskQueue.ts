@@ -12,6 +12,10 @@ const connection = new Redis({
     maxRetriesPerRequest: null,
 });
 
+console.info(`[Redis] Connecting to ${REDIS_HOST}:${REDIS_PORT}`);
+connection.on('ready', () => {
+    console.info('[Redis] Connection ready');
+});
 connection.on('error', (err) => {
     console.error('[Redis] Error connecting to Redis:', err.message);
 });
@@ -36,9 +40,8 @@ export const modWorker = new Worker(
                 if (!task.decodedDir) {
                     await runDecompileTask(task);
                 }
-                if (task.status === 'success') {
-                    await runModTask(task, payload);
-                }
+                // Always run mod after ensuring decodedDir is ready.
+                await runModTask(task, payload);
             }
         } catch (err) {
             setTaskError(

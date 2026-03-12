@@ -1,5 +1,5 @@
 services:
-  apk-modder:
+  apk-rebuilder:
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,7 +12,7 @@ services:
     ports:
       - '127.0.0.1:3000:3000'
     volumes:
-      - apk_modder_data:/app/data
+      - apk_rebuilder_data:/app/data
     environment:
       - PORT=3000
       - HOST=0.0.0.0
@@ -20,21 +20,21 @@ services:
       - ZIPALIGN_PATH=/usr/local/bin/zipalign
       - APKSIGNER_PATH=/usr/local/bin/apksigner
       - KEYTOOL_PATH=keytool
-      - REDIS_HOST=redis-apk-modder
+      - REDIS_HOST=redis-apk-rebuilder
       - REDIS_PORT=6379
       - DEBUG_KEY_ALIAS=androiddebugkey
       - DEBUG_KEY_PASS=android
     # command: ["npm", "run", "dev"] # 开发模式可改回
     restart: unless-stopped
     depends_on:
-      - redis-apk-modder
+      - redis-apk-rebuilder
 
-  redis-apk-modder:
+  redis-apk-rebuilder:
     image: redis:7-alpine
     volumes:
-      - apk_modder_redis_data:/data
+      - apk_rebuilder_redis_data:/data
     restart: unless-stopped
 
 volumes:
-  apk_modder_data:
-  apk_modder_redis_data:
+  apk_rebuilder_data:
+  apk_rebuilder_redis_data:

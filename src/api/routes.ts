@@ -70,7 +70,7 @@ export function createApiRouter(): Router {
       throw new Error('APK file is missing from storage');
     }
     const task = createTask(item.filePath, item.name || path.basename(item.filePath), item.id, tenantId);
-    const touched = touchApkItem(item.id);
+    const touched = touchApkItem(item.id, tenantId);
     const activeItem = touched || item;
     const cacheHit = Boolean(activeItem.parsedReady && activeItem.decodeCachePath && fs.existsSync(activeItem.decodeCachePath));
 
@@ -106,12 +106,13 @@ export function createApiRouter(): Router {
       return;
     }
     const tenantId = req.header('x-tenant-id');
-    const { item, created } = addOrGetApkItem(req.file.originalname || 'uploaded.apk', req.file.buffer);
+    const { item, created } = addOrGetApkItem(req.file.originalname || 'uploaded.apk', req.file.buffer, tenantId || undefined);
     ok(res, { ...startTaskFromLibraryItem(item, tenantId), deduplicatedUpload: !created });
   });
 
-  router.get('/library/apks', (_req, res) => {
-    const items = listApkItems().map(item => {
+  router.get('/library/apks', (req, res) => {
+    const tenantId = req.header('x-tenant-id');
+    const items = listApkItems(tenantId || undefined).map(item => {
       // when we have a decoded cache we can provide an icon URL that will
       // return the appropriate image derived from the cache. this keeps the
       // library UI from showing a blank square.
@@ -126,7 +127,8 @@ export function createApiRouter(): Router {
 
   // serve an icon directly from the library cache without creating a task
   router.get('/library/icon/:itemId', (req, res) => {
-    const item = getApkItem(req.params['itemId']);
+    const tenantId = req.header('x-tenant-id');
+    const item = getApkItem(req.params['itemId'], tenantId || undefined);
     if (!item || !item.decodeCachePath) {
       fail(res, 404, 'Icon not found', 'NOT_FOUND');
       return;
@@ -146,7 +148,7 @@ export function createApiRouter(): Router {
       fail(res, 400, 'Missing apk library id', 'BAD_REQUEST');
       return;
     }
-    const item = getApkItem(itemId);
+    const item = getApkItem(itemId, tenantId || undefined);
     if (!item) {
       fail(res, 404, 'APK not found in library', 'NOT_FOUND');
       return;
@@ -155,7 +157,8 @@ export function createApiRouter(): Router {
   });
 
   router.delete('/library/apks/:itemId', (req, res) => {
-    if (!deleteApkItem(req.params['itemId'])) {
+    const tenantId = req.header('x-tenant-id');
+    if (!deleteApkItem(req.params['itemId'], tenantId || undefined)) {
       fail(res, 404, 'APK not found in library', 'NOT_FOUND');
       return;
     }
@@ -378,8 +381,14 @@ export function createApiRouter(): Router {
       fail(res, 404, 'Signed apk is not ready', 'NOT_FOUND');
       return;
     }
-    const appName = task.apkInfo?.appName?.trim() || '';
-    const stem = appName ? toSafeFileStem(appName) : `modded-${task.id}`;
+    // construct a meaningful filename using package metadata
+    // prefer user-visible app name, fall back to package name, then task id.
+    let base = task.apkInfo?.appName?.trim() || task.apkInfo?.packageName || `modded-${task.id}`;
+    // append version name if available for clarity
+    if (task.apkInfo?.versionName) {
+      base += ` ${task.apkInfo.versionName}`;
+    }
+    const stem = toSafeFileStem(base);
     res.download(task.signedApkPath, `${stem}.apk`);
   });
 

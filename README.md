@@ -1,4 +1,4 @@
-# APK Modder (Express + TypeScript + Static UI)
+# APK Rebuilder (Express + TypeScript + Static UI)
 
 这是一个后端单仓版本：`Node.js + Express + TypeScript`，前端为 `public/` 下静态页面（无需单独前端工程）。
 
@@ -17,7 +17,7 @@ docker compose up -d --build
 ```
 
 说明：
-- 如果设置了 `APK_MODDER_IMAGE`，脚本会优先尝试拉预构建镜像。
+- 如果设置了 `APK_REBUILDER_IMAGE`，脚本会优先尝试拉预构建镜像。
 - 拉取失败或未设置时，自动回退本地构建。
 
 ## 项目结构
@@ -50,7 +50,7 @@ docker compose up -d --build
 - `GET /api/edit-file/:id`
 - `GET /api/files/:id/tree`
 - `GET /api/files/:id/content`
-- `GET /api/download/:id` (可选 API Key)
+- `GET /api/download/:id` (可选 API Key) – 下载时文件名会使用 APK 中的 appName，若存在则附带版本号；如无则退回包名或任务 ID。
 
 > **注意**: 上述路径是指向运行在此仓库编译出的服务器且附带 `/api` 前缀的情况；如果你在其他宿主应用中挂载路由，可直接使用去掉 `api` 前缀的版本，例如 `/upload`、`/status/:id` 等。
 
@@ -66,7 +66,7 @@ docker compose up -d --build
 
 ## 插件接口
 
-本仓库本身只是 **一个独立的后端插件实现**，并不包含宿主框架。 在一个平台中可能会有多个类似插件，`apk-modder` 是其中之一，本项目演示了后端插件的最小结构。标准入口如下：
+本仓库本身只是 **一个独立的后端插件实现**，并不包含宿主框架。 在一个平台中可能会有多个类似插件，`apk-rebuilder` 是其中之一，本项目演示了后端插件的最小结构。标准入口如下：
 
 - `GET /plugin/manifest`
 - `POST /plugin/execute`

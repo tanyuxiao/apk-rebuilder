@@ -13,7 +13,7 @@ Open: `http://localhost:3000`
 If you have a public prebuilt image, set:
 
 ```bash
-export APK_MODDER_IMAGE=ghcr.io/your-org/apk-modder:latest
+export APK_REBUILDER_IMAGE=ghcr.io/your-org/apk-rebuilder:latest
 ./scripts/quick-start.sh
 ```
 

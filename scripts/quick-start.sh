@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="${APK_MODDER_IMAGE:-}"
+IMAGE="${APK_REBUILDER_IMAGE:-}"
 
 detect_platform() {
   local machine
@@ -19,8 +19,8 @@ detect_platform() {
   esac
 }
 
-if [[ -z "${APK_MODDER_PLATFORM:-}" ]]; then
-  export APK_MODDER_PLATFORM="$(detect_platform)"
+if [[ -z "${APK_REBUILDER_PLATFORM:-}" ]]; then
+  export APK_REBUILDER_PLATFORM="$(detect_platform)"
 fi
 
 if [[ -n "${IMAGE}" ]]; then
@@ -34,6 +34,6 @@ if [[ -n "${IMAGE}" ]]; then
   echo "[quick-start] Prebuilt image not accessible, falling back to local build."
 fi
 
-echo "[quick-start] Starting local build (platform=${APK_MODDER_PLATFORM:-auto})"
+echo "[quick-start] Starting local build (platform=${APK_REBUILDER_PLATFORM:-auto})"
 docker compose up -d --build
 echo "[quick-start] Done. Open: http://localhost:3000"

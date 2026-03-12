@@ -1,6 +1,6 @@
 {
-  "id": "apk-modder",
-  "name": "APK Modder",
+  "id": "apk-rebuilder",
+  "name": "APK Rebuilder",
   "version": "1.0.0",
   "type": "backend",
   "entry": {
@@ -13,11 +13,12 @@
   ],
   "scopes": [
     "apk.mod.run",
-    "apk.mod.read"
+    "apk.mod.read",
+    "apk.mod.admin"
   ],
   "ui": {
     "mode": "hosted-form",
-    "title": "APK Modder",
+    "title": "APK Rebuilder",
     "description": "Upload an APK or reuse a cached APK, modify package/app metadata, patch Unity config, patch files, and build a signed APK.",
     "submitLabel": "Start Mod Task"
   },
@@ -140,6 +141,10 @@
           "reuseDecodedCache": {
             "type": "boolean",
             "default": true
+          },
+          "useStandardPackage": {
+            "type": "boolean",
+            "default": false
           },
           "async": {
             "type": "boolean",

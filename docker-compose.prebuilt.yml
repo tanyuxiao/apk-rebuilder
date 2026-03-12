@@ -1,6 +1,6 @@
 services:
-  apk-modder:
-    image: ${APK_MODDER_IMAGE:-ghcr.io/tanyuxiao/apk-modder:latest}
+  apk-rebuilder:
+    image: ${APK_REBUILDER_IMAGE:-ghcr.io/tanyuxiao/apk-rebuilder:latest}
     pull_policy: always
     ports:
       - '3000:3000'

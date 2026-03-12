@@ -73,7 +73,7 @@ export function createTaskFromLibraryItem(
     throw new Error('APK file is missing from storage');
   }
   const task = createTask(item.filePath, item.name || path.basename(item.filePath), item.id, tenantId, userId);
-  const touched = touchApkItem(item.id);
+  const touched = touchApkItem(item.id, tenantId);
   const activeItem = touched || item;
   const cacheHit = Boolean(activeItem.parsedReady && activeItem.decodeCachePath && fs.existsSync(activeItem.decodeCachePath));
 

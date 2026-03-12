@@ -6,6 +6,7 @@ import {
   DEBUG_ALIAS,
   DEBUG_KEYSTORE_PATH,
   DEBUG_PASS,
+  JAVA_HOME,
   JAVA_PATH,
   KEYTOOL_PATH,
   ZIPALIGN_PATH,
@@ -53,11 +54,23 @@ function runApktool(args: string[]): void {
   runCommand(APKTOOL_PATH, args);
 }
 
-function isToolAvailable(path: string): boolean {
+function isToolAvailable(command: string): boolean {
   try {
-    // spawnSync returns status or throws if not accessible
-    const proc = require('child_process').spawnSync(path, ['--version'], { encoding: 'utf8' });
-    return proc.status === 0;
+    const env = { ...process.env, JAVA_HOME };
+    let cmd = command;
+    let args = ['--version'];
+    let allowedExitCodes = new Set([0]);
+
+    if (command.endsWith('.jar')) {
+      cmd = JAVA_PATH;
+      args = ['-jar', command, '--version'];
+    } else if (command.endsWith('zipalign')) {
+      args = ['-h'];
+      allowedExitCodes = new Set([0, 2]);
+    }
+
+    const proc = require('child_process').spawnSync(cmd, args, { encoding: 'utf8', env });
+    return proc.status === 0 || allowedExitCodes.has(proc.status || 0);
   } catch {
     return false;
   }
@@ -107,7 +120,7 @@ export async function runDecompileTask(task: Task): Promise<void> {
     runApktool(['d', '--no-src', '-f', task.filePath, '-o', outDir]);
     parseApkInfo(task);
     if (task.libraryItemId && task.apkInfo) {
-      updateParseCache(task.libraryItemId, outDir, task.apkInfo);
+      updateParseCache(task.libraryItemId, outDir, task.apkInfo, task.tenantId);
     }
     task.status = 'success';
     logTask(task, 'Decompile finished');
@@ -157,6 +170,17 @@ export async function runModTask(task: Task, payload: ModPayload): Promise<void>
     if (skipReal) {
       // produce a dummy signed apk so that download-ready logic passes
       fs.writeFileSync(signedApkPath, 'stub');
+      // when we don't run real tools we still want metadata for naming, so
+      // seed apkInfo from payload values
+      task.apkInfo = {
+        appName: payload.appName || '',
+        packageName: payload.packageName || '',
+        versionName: payload.versionName || '',
+        versionCode: payload.versionCode || '',
+        appLabelRaw: payload.appName || payload.packageName || '',
+        iconRef: null,
+        iconUrl: null,
+      } as any;
       task.status = 'success';
       logTask(task, 'Stub mod workflow finished');
     } else {
