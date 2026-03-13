@@ -10,6 +10,8 @@
     "lint": "npm run type-check",
     "type-check": "tsc --noEmit",
     "self-check": "node scripts/self-check.js",
+    "bootstrap-tools": "bash scripts/bootstrap-tools.sh",
+    "test:docker": "docker compose run --rm --no-deps apk-rebuilder node scripts/self-check.js",
     "test": "npm run self-check"
   },
   "engines": {
