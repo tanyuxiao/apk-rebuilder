@@ -7,8 +7,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "lint": "npm run type-check",
     "type-check": "tsc --noEmit",
-    "self-check": "node scripts/self-check.js"
+    "self-check": "node scripts/self-check.js",
+    "test": "npm run self-check"
   },
   "engines": {
     "node": ">=20.0.0"
