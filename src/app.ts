@@ -3,7 +3,7 @@ import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { HOST, PORT, FRONTEND_PUBLIC_DIR, ensureRuntimeDirs } from './config';
+import { APK_REBUILDER_MODE, HOST, PORT, FRONTEND_PUBLIC_DIR, ensureRuntimeDirs } from './config';
 import { createPluginRouter } from './plugin/routes';
 import { createApiRouter } from './api/routes';
 import { ok, fail } from './common/response';
@@ -43,6 +43,10 @@ app.use('/api', createApiRouter());
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {
     fail(res, 404, `Route not found: GET ${req.path}`, 'NOT_FOUND');
+    return;
+  }
+  if (APK_REBUILDER_MODE === 'dev') {
+    fail(res, 404, 'Dev mode enabled. Please use the Vite dev server for UI.', 'DEV_MODE_UI');
     return;
   }
   if (!fs.existsSync(FRONTEND_PUBLIC_DIR)) {

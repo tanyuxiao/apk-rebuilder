@@ -1,6 +1,6 @@
 import app from './app';
-import { HOST, PORT } from './config';
+import { APK_REBUILDER_MODE, HOST, PORT } from './config';
 
 app.listen(PORT, HOST, () => {
-  console.info(`apk-rebuilder listening on http://${HOST}:${PORT}`);
+  console.info(`apk-rebuilder listening on http://${HOST}:${PORT} (mode=${APK_REBUILDER_MODE})`);
 });

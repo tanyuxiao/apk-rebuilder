@@ -1,0 +1,13 @@
+body.apk-embed {
+  background: var(--bg-page);
+}
+
+.apk-embed .wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--spacing-md);
+}
+
+.apk-embed .card {
+  box-shadow: var(--shadow-sm);
+}

@@ -72,6 +72,7 @@ export const DEBUG_ALIAS = process.env['DEBUG_KEY_ALIAS'] || 'androiddebugkey';
 export const DEBUG_PASS = process.env['DEBUG_KEY_PASS'] || 'android';
 export const API_KEY = process.env['API_KEY'] || process.env['AUTH_TOKEN'] || '';
 export const AUTH_ENABLED = API_KEY.length > 0;
+export const APK_REBUILDER_MODE = process.env['APK_REBUILDER_MODE'] || 'prod';
 export const FRONTEND_PUBLIC_DIR = path.join(process.cwd(), 'public');
 export const PLUGIN_ID = process.env['PLUGIN_ID'] || 'apk-rebuilder';
 export const PLUGIN_TOKEN_SECRET = process.env['PLUGIN_TOKEN_SECRET'] || '';

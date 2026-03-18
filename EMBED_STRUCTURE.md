@@ -8,43 +8,38 @@
    - 插件 iframe 的入口页面
    - 仅包含容器与脚本入口
    - 按顺序加载：
-     - `embed.theme.css`（主题变量）
-     - `embed.ui.css`（组件样式）
-     - `embed.main.js`（脚本入口）
+     - `styles/theme.css`（主题变量）
+     - `styles/ui.base.css`（通用样式）
+     - `styles/ui.embed.css`（嵌入版局部样式）
+     - `modules/app.embed.js`（脚本入口）
 
-2. `public/embed.theme.css`
-   - 统一的主题变量定义（与 vue3 插件设计指南一致）
+2. `public/styles/theme.css`
+   - 统一的主题变量定义（与插件设计指南一致）
    - 包含两套主题：
      - `:root`：日间主题
      - `body[data-mode="dark"]`：夜间主题
    - 仅负责变量，不包含具体组件样式
 
-3. `public/embed.ui.css`
-   - 嵌入端 UI 样式（容器、表单、按钮、弹层等）
-   - 仅引用 `embed.theme.css` 中的变量
+3. `public/styles/ui.base.css`
+   - 通用 UI 样式（按钮、表单、卡片、布局）
 
-4. `public/embed.main.js`
-   - 脚本入口，负责初始化：
-     - i18n
-     - UI 渲染
-     - 场景号列表加载
-     - 管理员区加载
-     - 提交 / 轮询 / 进度
-   - 接收宿主 `INIT`、`TOKEN_UPDATE` 等消息
+4. `public/styles/ui.embed.css`
+   - 嵌入版布局样式（容器宽度、间距）
+
+5. `public/modules/app.embed.js`
+   - 嵌入端入口，复用 `modules/` 下的功能组件
 
 ## 2. 脚本模块划分
 
-- `embed.host.js`：宿主通信、Token 与 PluginAuth 处理、配置解析
-- `embed.ui.js`：DOM 渲染与状态更新
-- `embed.scenes.js`：场景列表获取与选择逻辑
-- `embed.admin.js`：管理员标准包管理
-- `embed.submit.js`：提交、执行与错误处理
-- `embed.progress.js`：运行状态轮询与进度展示
-- `embed.i18n.js`：国际化文案与语言切换
-- `embed.errors.js`：统一错误提示与 Banner
+- `public/modules/app.embed.js`：嵌入端入口
+- `public/modules/app.shared.js`：通用逻辑编排（同 index 复用）
+- `public/modules/sections/*`：功能区模块（上传/包信息/构建/日志等）
+- `public/modules/modals/*`：弹层模块（图标编辑）
+- `public/modules/tools/*`：工具检查
+- `public/modules/drawers/*`：抽屉模块（如 APK 列表/文件浏览）
 
 ## 3. 维护约定
 
-- 样式变量只放在 `embed.theme.css`
-- 组件样式只放在 `embed.ui.css`
+- 样式变量只放在 `styles/theme.css`
+- 通用样式只放在 `styles/ui.base.css`
 - `embed.html` 仅保留结构和入口，不再内联样式

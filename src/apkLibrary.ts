@@ -59,6 +59,24 @@ function safeFilename(name: string): string {
   return cleaned || 'uploaded.apk';
 }
 
+function normalizeOriginalName(name: string): string {
+  let value = String(name || '');
+  try {
+    if (/%[0-9A-Fa-f]{2}/.test(value)) {
+      const decoded = decodeURIComponent(value);
+      if (decoded) value = decoded;
+    }
+  } catch {
+    // ignore decode errors
+  }
+
+  const latin1Decoded = Buffer.from(value, 'latin1').toString('utf8');
+  if (latin1Decoded && !/�/.test(latin1Decoded)) {
+    return latin1Decoded;
+  }
+  return value;
+}
+
 function sha256(data: Buffer): string {
   return crypto.createHash('sha256').update(data).digest('hex');
 }
@@ -85,7 +103,7 @@ export function addOrGetApkItem(
   const { baseDir } = getTenantPaths(tenantId);
   const digest = sha256(data);
   const createdAt = nowIso();
-  const displayName = safeFilename(originalName || 'uploaded.apk');
+  const displayName = safeFilename(normalizeOriginalName(originalName || 'uploaded.apk'));
 
   for (const item of items) {
     if (item.sha256 === digest) {

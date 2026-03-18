@@ -3,12 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <title>APK Rebuilder - 嵌入版</title>
-  <link rel="stylesheet" href="./embed.theme.css" />
-  
-  <link rel="stylesheet" href="./embed.ui.css" />
+  <link rel="stylesheet" href="./styles/theme.css" />
+  <link rel="stylesheet" href="./styles/ui.base.css" />
+  <link rel="stylesheet" href="./styles/ui.embed.css" />
 </head>
-<body>
+<body class="apk-embed">
   <div id="app"></div>
-  <script type="module" src="./embed.main.js"></script>
+  <script>
+    if (location.port === '5173') {
+      const s = document.createElement('script');
+      s.type = 'module';
+      s.src = '/@vite/client';
+      document.head.appendChild(s);
+    }
+  </script>
+  <script type="module" src="./modules/app.embed.js"></script>
 </body>
 </html>

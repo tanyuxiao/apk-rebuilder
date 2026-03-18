@@ -38,10 +38,11 @@ npm run self-check
   - `src/common/`: 公共工具函数（响应格式、任务处理等）
   - `src/middleware/`: 中间件（例如 `requireAuth`）
 - `public/`: 静态前端页面（仅供本仓库内的调试界面使用）
-  - `embed.html`: 插件 iframe 入口
-  - `embed.theme.css`: 主题变量（含日/夜两套）
-  - `embed.ui.css`: 组件样式
-  - `embed.*.js`: 插件嵌入端脚本模块
+- `embed.html`: 插件 iframe 入口
+- `styles/theme.css`: 主题变量（含日/夜两套）
+- `styles/ui.base.css`: 通用 UI 样式
+- `styles/ui.embed.css`: 嵌入版局部样式
+- `modules/app.embed.js`: 嵌入端入口模块
 - `EMBED_STRUCTURE.md`: 嵌入端结构说明（脚本与样式拆分说明）
 - `Dockerfile`: 生产镜像构建
 - `docker-compose.yml`: 本地/部署启动
@@ -98,11 +99,24 @@ npm install
 npm run dev
 ```
 
+> `npm run dev` 会同时启动后端热重启（ts-node-dev）与前端 HMR（Vite）。你也可以分别执行：
+>
+> - `npm run dev:server`
+> - `npm run dev:ui`
+>
+> 访问前端时请打开 Vite 地址（默认 `http://127.0.0.1:5173`）。
+
 ## 构建和运行
 
 ```bash
 npm run build
 npm start
+```
+
+生产模式可使用：
+
+```bash
+npm run start:prod
 ```
 
 ## 鉴权
@@ -125,6 +139,7 @@ npm start
 
 - `PORT` 默认 `3000`
 - `HOST` 默认 `127.0.0.1`
+- `APK_REBUILDER_MODE` 默认 `prod`（`dev` 启动前端 HMR）
 - `APKTOOL_PATH` 默认 `apktool`
 - `ZIPALIGN_PATH` 默认自动探测 Android build-tools 中的 `zipalign`
 - `APKSIGNER_PATH` 默认自动探测 Android build-tools 中的 `apksigner`
