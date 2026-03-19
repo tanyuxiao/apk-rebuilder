@@ -83,7 +83,7 @@ body.apk-index {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.24);
+  box-shadow: var(--shadow-md);
 }
 
 .file-drawer-toggle {
@@ -188,6 +188,18 @@ body.apk-index {
   display: block;
   margin: 0 auto 10px;
   animation: spin 0.9s linear infinite;
+}
+
+.inline-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--primary-light);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 8px;
+  animation: spin 0.9s linear infinite;
+  vertical-align: middle;
 }
 
 @keyframes spin {
@@ -653,10 +665,247 @@ body.apk-index {
   word-break: break-word;
 }
 
+.log-panel {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+  max-height: 800px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  gap: var(--spacing-sm);
+}
+
+.log-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.log-title {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.log-status {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.log-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.log-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.log-aside,
+.log-files {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+}
+
+.log-aside {
+  width: 240px;
+  border-right: 1px solid var(--border-color);
+}
+
+.log-files {
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+
+.log-content {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid var(--border-color);
+}
+
+.log-section-title {
+  padding: 8px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.log-section-title--row {
+  background: var(--bg-secondary);
+}
+
+.log-task-name {
+  color: var(--primary-color);
+  text-transform: none;
+}
+
+.log-task-list,
+.log-file-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.log-filter-row {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.log-file-filter {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+}
+
+.log-output-container {
+  flex: 1;
+  overflow: auto;
+  background: var(--bg-page);
+  padding: 12px;
+  position: relative;
+}
+
+.log-output {
+  margin: 0;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.log-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.log-empty.log-empty-error {
+  color: var(--danger-color);
+}
+
+.task-item {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.task-item:hover {
+  background: var(--bg-hover);
+}
+
+.task-item.active {
+  background: var(--bg-active);
+  border-color: var(--primary-light);
+}
+
+.task-item .task-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-item .task-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+.task-status {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-success {
+  background: var(--success-light);
+  color: var(--success-color);
+}
+
+.status-processing {
+  background: color-mix(in srgb, var(--primary-color) 18%, var(--bg-card));
+  color: var(--primary-color);
+}
+
+.status-failed {
+  background: var(--danger-light);
+  color: var(--danger-color);
+}
+
+.status-queued {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.file-item {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-item.active {
+  background: var(--bg-active);
+  color: var(--primary-color);
+}
+
+#logOutputContainer::-webkit-scrollbar { width: 8px; height: 8px; }
+#logOutputContainer::-webkit-scrollbar-track { background: transparent; }
+#logOutputContainer::-webkit-scrollbar-thumb { background: var(--border-color-hover); border-radius: 10px; }
+#logOutputContainer::-webkit-scrollbar-thumb:hover { background: var(--border-color-active); }
+
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: var(--overlay-color);
   display: none;
   align-items: center;
   justify-content: center;

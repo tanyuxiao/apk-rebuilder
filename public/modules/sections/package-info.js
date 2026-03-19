@@ -1,17 +1,19 @@
+import { t } from '../i18n.js';
+
 export function renderPackageInfoSection(container, options = {}) {
   const {
     showOriginal = true,
     fields = ['appName', 'packageName', 'versionName', 'versionCode'],
     showIcon = true,
     showChangeCount = true,
-    title = '包信息修改',
+    title = t('pkg.title'),
   } = options;
 
   const fieldLabelMap = {
-    appName: '应用名',
-    packageName: '包名',
-    versionName: '版本名',
-    versionCode: '版本号',
+    appName: t('pkg.appName'),
+    packageName: t('pkg.packageName'),
+    versionName: t('pkg.versionName'),
+    versionCode: t('pkg.versionCode'),
   };
 
   const renderField = (field) => {
@@ -24,15 +26,15 @@ export function renderPackageInfoSection(container, options = {}) {
   const originalHtml = showOriginal
     ? `
         <div class="compare-box readonly-pane">
-          <div class="compare-title">原包信息 <span class="readonly-hint">只读</span></div>
+          <div class="compare-title">${t('pkg.original')} <span class="readonly-hint">${t('pkg.readonly')}</span></div>
           <div class="icon-box">
             <img id="srcIcon" alt="source icon" style="display:none" />
-            <span id="srcIconEmpty" class="icon-empty">无图标</span>
+            <span id="srcIconEmpty" class="icon-empty">${t('pkg.noIcon')}</span>
           </div>
-          <div class="kv"><span class="k">应用名</span><span class="v" id="srcName">-</span><span></span></div>
-          <div class="kv"><span class="k">包名</span><span class="v" id="srcPkg">-</span><span></span></div>
-          <div class="kv"><span class="k">版本名</span><span class="v" id="srcVer">-</span><span></span></div>
-          <div class="kv"><span class="k">版本号</span><span class="v" id="srcCode">-</span><span></span></div>
+          <div class="kv"><span class="k">${t('pkg.appName')}</span><span class="v" id="srcName">-</span><span></span></div>
+          <div class="kv"><span class="k">${t('pkg.packageName')}</span><span class="v" id="srcPkg">-</span><span></span></div>
+          <div class="kv"><span class="k">${t('pkg.versionName')}</span><span class="v" id="srcVer">-</span><span></span></div>
+          <div class="kv"><span class="k">${t('pkg.versionCode')}</span><span class="v" id="srcCode">-</span><span></span></div>
         </div>
       `
     : '';
@@ -41,14 +43,14 @@ export function renderPackageInfoSection(container, options = {}) {
     ? `
         <div class="icon-box">
           <img id="newIcon" alt="new icon" style="display:none" />
-          <span id="newIconEmpty" class="icon-empty">无图标</span>
+          <span id="newIconEmpty" class="icon-empty">${t('pkg.noIcon')}</span>
         </div>
         <div class="field">
-          <label>新图标（png/webp/jpg）</label>
+          <label>${t('pkg.newIcon')}</label>
           <div class="file-pick">
             <input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" />
-            <button id="pickIconBtn" type="button" class="secondary">选择图标文件</button>
-            <span id="iconFileName" class="file-name">未选择任何文件</span>
+            <button id="pickIconBtn" type="button" class="secondary">${t('pkg.pickIcon')}</button>
+            <span id="iconFileName" class="file-name">${t('pkg.noFile')}</span>
           </div>
         </div>
       `
@@ -62,12 +64,12 @@ export function renderPackageInfoSection(container, options = {}) {
     <div class="card" id="sectionPackageInfo">
       <div class="toolbar">
         <strong>${title}</strong>
-        ${showChangeCount ? '<div><span class="tag warn" id="changedCount">字段变更 0 项</span></div>' : ''}
+        ${showChangeCount ? `<div><span class="tag warn" id="changedCount">${t('pkg.changedCount', { count: 0 })}</span></div>` : ''}
       </div>
       <div class="grid" style="${gridStyle}">
         ${originalHtml}
         <div class="compare-box editable-pane">
-          <div class="compare-title">修改信息</div>
+          <div class="compare-title">${t('pkg.modifyInfo')}</div>
           ${iconHtml}
           ${fieldsHtml}
         </div>

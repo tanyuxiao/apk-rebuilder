@@ -1,4 +1,5 @@
 import { formatBytes } from '../state.js';
+import { t } from '../i18n.js';
 
 export function renderFileBrowserDrawer(container) {
   container.insertAdjacentHTML(
@@ -7,28 +8,28 @@ export function renderFileBrowserDrawer(container) {
     <aside id="fileDrawer" class="file-drawer collapsed">
       <div class="apk-drawer-head">
         <div class="apk-drawer-title" style="display:flex; align-items:baseline; gap:8px; min-width:0;">
-          <span>文件浏览</span>
-          <span id="currentBrowseApk" class="muted" style="font-weight:400;">当前 APK: -</span>
+          <span>${t('fileBrowser.title')}</span>
+          <span id="currentBrowseApk" class="muted" style="font-weight:400;">${t('fileBrowser.currentApk', { name: '-' })}</span>
         </div>
       </div>
       <div style="padding: 10px 10px 8px;">
-        <input id="fileTreeSearch" type="text" placeholder="搜索文件（支持路径关键字）" />
+        <input id="fileTreeSearch" type="text" placeholder="${t('fileBrowser.searchPlaceholder')}" />
       </div>
       <div class="file-browser-wrap" style="padding: 0 10px 10px; margin-top: 0;">
         <div class="file-pane tree-pane">
-          <div id="fileTreeRoot" class="file-tree muted">请先上传并解析 APK</div>
+          <div id="fileTreeRoot" class="file-tree muted">${t('fileBrowser.emptyHint')}</div>
         </div>
         <div class="file-pane content-pane">
           <div class="file-meta-row">
-            <div id="fileMeta" class="file-meta" style="margin-bottom:0;">请选择文件查看内容</div>
-            <button id="copyFilePathBtn" class="secondary" type="button">复制路径</button>
+            <div id="fileMeta" class="file-meta" style="margin-bottom:0;">${t('fileBrowser.selectFilePrompt')}</div>
+            <button id="copyFilePathBtn" class="secondary" type="button">${t('fileBrowser.copyPath')}</button>
           </div>
-          <pre id="fileContent" class="file-content">请选择左侧文件</pre>
+          <pre id="fileContent" class="file-content">${t('fileBrowser.selectLeftPrompt')}</pre>
         </div>
       </div>
-      <button id="fileDrawerToggle" class="file-drawer-toggle" type="button" aria-label="展开文件浏览抽屉">
+      <button id="fileDrawerToggle" class="file-drawer-toggle" type="button" aria-label="${t('fileBrowser.toggleExpand')}">
         <span id="fileDrawerToggleArrow" class="apk-drawer-toggle-arrow">«</span>
-        <span class="file-drawer-toggle-label">文件浏览</span>
+        <span class="file-drawer-toggle-label">${t('fileBrowser.title')}</span>
       </button>
     </aside>
     `
@@ -46,14 +47,14 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
     if (toggle) {
       toggle.setAttribute(
         'aria-label',
-        state.fileDrawerCollapsed ? '展开文件浏览抽屉' : '收起文件浏览抽屉'
+        state.fileDrawerCollapsed ? t('fileBrowser.toggleExpand') : t('fileBrowser.toggleCollapse')
       );
     }
   }
 
   function renderCurrentBrowseApk() {
     const el = document.getElementById('currentBrowseApk');
-    if (el) el.textContent = `当前 APK: ${state.currentBrowseApkName || '-'}`;
+    if (el) el.textContent = t('fileBrowser.currentApk', { name: state.currentBrowseApkName || '-' });
   }
 
   function renderFileTree() {
@@ -61,7 +62,7 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
     const data = state.fileTreeData;
     if (!root) return;
     if (!data?.tree) {
-      root.innerHTML = '<span class="muted">请先上传并解析 APK</span>';
+      root.innerHTML = `<span class="muted">${t('fileBrowser.emptyHint')}</span>`;
       return;
     }
 
@@ -85,7 +86,7 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
 
     const filteredRoot = filterNode(data.tree);
     if (!filteredRoot) {
-      root.innerHTML = `<span class="muted">未找到匹配文件：${state.fileTreeSearch}</span>`;
+      root.innerHTML = `<span class="muted">${t('fileBrowser.noMatch', { keyword: state.fileTreeSearch })}</span>`;
       return;
     }
 
@@ -95,7 +96,7 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
         return `
           <details open>
             <summary>📁 ${node.name}</summary>
-            <div class="children">${children || '<span class="muted">空目录</span>'}</div>
+            <div class="children">${children || `<span class="muted">${t('fileBrowser.emptyDir')}</span>`}</div>
           </details>
         `;
       }
@@ -129,7 +130,7 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
   async function refreshFileTree() {
     const root = document.getElementById('fileTreeRoot');
     if (!state.id) {
-      if (root) root.innerHTML = '<span class="muted">请先上传并解析 APK</span>';
+      if (root) root.innerHTML = `<span class="muted">${t('fileBrowser.emptyHint')}</span>`;
       state.filePathCandidates = [];
       onFilePaths();
       return;
@@ -154,11 +155,11 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
     const content = document.getElementById('fileContent');
     if (!meta || !content) return;
 
-    const truncatedHint = data.truncated ? '（已截断）' : '';
+    const truncatedHint = data.truncated ? t('fileBrowser.truncated') : '';
     meta.textContent = `${data.path} | ${data.mime} | ${formatBytes(data.size)} ${truncatedHint}`.trim();
 
     if (data.kind === 'binary') {
-      content.textContent = `[二进制文件]\nBase64 预览（最多 ${formatBytes(512 * 1024)}）:\n\n${data.content}`;
+      content.textContent = t('fileBrowser.binaryPreview', { size: formatBytes(512 * 1024), content: data.content });
       return;
     }
     content.textContent = data.content || '';
@@ -167,16 +168,16 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
   async function copyCurrentFilePath() {
     const path = state.fileActivePath || '';
     if (!path) {
-      alert('请先在左侧选择一个文件');
+      alert(t('fileBrowser.selectFileAlert'));
       return;
     }
 
     try {
       await navigator.clipboard.writeText(path);
       const btn = document.getElementById('copyFilePathBtn');
-      if (btn) btn.textContent = '已复制';
+      if (btn) btn.textContent = t('fileBrowser.copied');
       setTimeout(() => {
-        if (btn) btn.textContent = '复制路径';
+        if (btn) btn.textContent = t('fileBrowser.copyPath');
       }, 1200);
     } catch {
       const textarea = document.createElement('textarea');
@@ -189,9 +190,9 @@ export function createFileBrowserDrawer({ state, api, onFilePaths }) {
       document.execCommand('copy');
       document.body.removeChild(textarea);
       const btn = document.getElementById('copyFilePathBtn');
-      if (btn) btn.textContent = '已复制';
+      if (btn) btn.textContent = t('fileBrowser.copied');
       setTimeout(() => {
-        if (btn) btn.textContent = '复制路径';
+        if (btn) btn.textContent = t('fileBrowser.copyPath');
       }, 1200);
     }
   }

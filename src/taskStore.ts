@@ -60,7 +60,6 @@ export function createTask(
     outputArtifactId: null,
     outputArtifactName: null,
   };
-  logTask(task, `Uploaded file: ${originalName}`);
   return saveTask(task);
 }
 

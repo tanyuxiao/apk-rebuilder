@@ -1,4 +1,5 @@
 import { iconEditor } from '../state.js';
+import { t } from '../i18n.js';
 
 export function renderIconEditorModal(container) {
   container.insertAdjacentHTML(
@@ -7,8 +8,8 @@ export function renderIconEditorModal(container) {
     <div id="iconEditorMask" class="modal-mask" role="dialog" aria-modal="true">
       <div class="modal">
         <div class="modal-head">
-          <strong>编辑图标</strong>
-          <button id="iconEditorCloseBtn" type="button" class="secondary">取消</button>
+          <strong>${t('icon.title')}</strong>
+          <button id="iconEditorCloseBtn" type="button" class="secondary">${t('icon.cancel')}</button>
         </div>
         <div class="editor-layout">
           <div class="editor-preview">
@@ -19,24 +20,24 @@ export function renderIconEditorModal(container) {
           <div class="editor-controls">
             <div class="editor-grid">
               <div class="editor-field slider-row">
-                <label>缩放</label>
+                <label>${t('icon.scale')}</label>
                 <input id="iconScale" type="range" min="0.5" max="2.5" step="0.01" value="1" />
               </div>
               <div class="editor-field slider-row">
-                <label>左右位移</label>
+                <label>${t('icon.offsetX')}</label>
                 <input id="iconOffsetX" type="range" min="-220" max="220" step="1" value="0" />
               </div>
               <div class="editor-field slider-row">
-                <label>上下位移</label>
+                <label>${t('icon.offsetY')}</label>
                 <input id="iconOffsetY" type="range" min="-220" max="220" step="1" value="0" />
               </div>
               <div class="editor-field">
                 <label>&nbsp;</label>
-                <button id="iconEditorResetBtn" type="button" class="secondary">重置</button>
+                <button id="iconEditorResetBtn" type="button" class="secondary">${t('icon.reset')}</button>
               </div>
             </div>
             <div class="editor-actions">
-              <button id="iconEditorApplyBtn" type="button">应用图标</button>
+              <button id="iconEditorApplyBtn" type="button">${t('icon.apply')}</button>
             </div>
           </div>
         </div>
@@ -67,7 +68,8 @@ export function createIconEditor({ state, onIconChanged }) {
     const cw = canvas.width;
     const ch = canvas.height;
     ctx.clearRect(0, 0, cw, ch);
-    ctx.fillStyle = '#ffffff';
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-card') || '#ffffff';
+    ctx.fillStyle = bg.trim();
     ctx.fillRect(0, 0, cw, ch);
 
     const fit = Math.min(cw / img.width, ch / img.height);
@@ -111,7 +113,7 @@ export function createIconEditor({ state, onIconChanged }) {
     if (!canvas) return;
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) {
-      alert('图标处理失败，请重试');
+      alert(t('icon.failed'));
       return;
     }
     const baseName = (iconEditor.fileName || 'icon').replace(/\.[^.]+$/, '');
@@ -130,7 +132,7 @@ export function createIconEditor({ state, onIconChanged }) {
     state.iconFile = file;
     state.iconPreviewUrl = previewUrl || '';
     const fileNameEl = getEl('iconFileName');
-    if (fileNameEl) fileNameEl.textContent = nameText || '未选择任何文件';
+    if (fileNameEl) fileNameEl.textContent = nameText || t('pkg.noFile');
     onIconChanged();
   }
 
@@ -173,7 +175,7 @@ export function createIconEditor({ state, onIconChanged }) {
         if (iconFile) iconFile.value = '';
       });
     }
-    if (applyBtn) applyBtn.addEventListener('click', () => applyIconEditor().catch(() => alert('图标处理失败，请重试')));
+    if (applyBtn) applyBtn.addEventListener('click', () => applyIconEditor().catch(() => alert(t('icon.failed'))));
     if (mask) {
       mask.addEventListener('click', (e) => {
         if (e.target === mask) {

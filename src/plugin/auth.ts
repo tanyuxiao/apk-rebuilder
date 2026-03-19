@@ -114,7 +114,7 @@ export function getLoosePrincipal(req: Request): PluginPrincipal {
       userId: null,
       tenantId: fallbackTenantId,
       pluginId: PLUGIN_ID,
-      scopes: ['apk.mod.run', 'apk.mod.read', 'apk.mod.admin'],
+      scopes: ['apk.rebuilder.run', 'apk.rebuilder.read', 'apk.rebuilder.admin'],
       exp: null,
     };
   }

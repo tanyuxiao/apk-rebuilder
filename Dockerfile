@@ -1,9 +1,19 @@
 ARG NODE_IMAGE=node:20-bookworm-slim
+ARG DEBIAN_MIRROR=mirrors.tuna.tsinghua.edu.cn
 
 FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip openjdk-17-jdk-headless && rm -rf /var/lib/apt/lists/*
+# Use configurable Debian mirror to avoid unstable deb.debian.org connection.
+RUN set -eux; \
+  DEBIAN_MIRROR=${DEBIAN_MIRROR:-mirrors.tuna.tsinghua.edu.cn}; \
+  if [ -n "$DEBIAN_MIRROR" ]; then \
+    sed -i "s|http://deb.debian.org/debian|http://$DEBIAN_MIRROR/debian|g" /etc/apt/sources.list.d/debian.sources; \
+    sed -i "s|http://deb.debian.org/debian-security|http://$DEBIAN_MIRROR/debian-security|g" /etc/apt/sources.list.d/debian.sources || true; \
+  fi; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends ca-certificates curl unzip openjdk-17-jdk-headless --fix-missing; \
+  rm -rf /var/lib/apt/lists/*
 
 ARG APKTOOL_VERSION=2.11.1
 ARG APKTOOL_JAR_URL=https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar
@@ -24,13 +34,21 @@ RUN npm run build
 FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
 
-# 安装运行时依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  openjdk-17-jre-headless \
-  unzip \
-  ca-certificates \
-  curl \
-  && rm -rf /var/lib/apt/lists/*
+# 安装运行时依赖（二次回退仍使用同一镜像源并加 --fix-missing）
+RUN set -eux; \
+  DEBIAN_MIRROR=${DEBIAN_MIRROR:-mirrors.tuna.tsinghua.edu.cn}; \
+  if [ -n "$DEBIAN_MIRROR" ]; then \
+    sed -i "s|http://deb.debian.org/debian|http://$DEBIAN_MIRROR/debian|g" /etc/apt/sources.list.d/debian.sources; \
+    sed -i "s|http://deb.debian.org/debian-security|http://$DEBIAN_MIRROR/debian-security|g" /etc/apt/sources.list.d/debian.sources || true; \
+  fi; \
+  apt-get update; \
+  apt-get install -y --no-install-recommends \
+    openjdk-17-jre-headless \
+    unzip \
+    ca-certificates \
+    curl \
+    --fix-missing; \
+  rm -rf /var/lib/apt/lists/*
 
 ARG ANDROID_BUILD_TOOLS_VERSION=34.0.0
 COPY --from=build /opt/tooling/apktool.jar /opt/apktool/apktool.jar
@@ -58,7 +76,7 @@ ENV ZIPALIGN_PATH=/usr/local/bin/zipalign
 ENV APKSIGNER_PATH=/usr/local/bin/apksigner
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=3005
 
-EXPOSE 3000
+EXPOSE 3005
 CMD ["node", "dist/index.js"]

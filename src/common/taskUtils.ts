@@ -73,6 +73,7 @@ export function createTaskFromLibraryItem(
     throw new Error('APK file is missing from storage');
   }
   const task = createTask(item.filePath, item.name || path.basename(item.filePath), item.id, tenantId, userId);
+  logTask(task, `Using APK from library: ${item.name || path.basename(item.filePath)} (id=${item.id})`);
   const touched = touchApkItem(item.id, tenantId);
   const activeItem = touched || item;
   const cacheHit = Boolean(activeItem.parsedReady && activeItem.decodeCachePath && fs.existsSync(activeItem.decodeCachePath));
@@ -95,7 +96,9 @@ export function createTaskFromLibraryItem(
 export function createTaskFromArtifact(artifactId: string, tenantId: string, userId?: string | null): Task {
   const localPath = fetchArtifactToLocal(artifactId, tenantId);
   const fileName = path.basename(localPath);
-  return createTask(localPath, fileName, null, tenantId, userId);
+  const task = createTask(localPath, fileName, null, tenantId, userId);
+  logTask(task, `Using artifact from host: ${artifactId} (${fileName})`);
+  return task;
 }
 
 export function ensureUploadedArtifact(task: Task): Task {

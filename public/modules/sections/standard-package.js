@@ -1,32 +1,55 @@
 import { formatBytes, fmtTime } from '../state.js';
+import { t } from '../i18n.js';
+import { showAlert, showConfirm } from '../embed/notify.js';
 
-export function renderStandardPackageSection(container) {
+export function renderStandardPackageSection(container, { canAdmin = true } = {}) {
   container.insertAdjacentHTML(
     'beforeend',
     `
     <div class="card" id="sectionStandardPackage">
       <div class="toolbar">
-        <strong>标准包管理</strong>
+        <strong>${t('standard.title')}</strong>
         <span id="standardPackageStatus" class="muted"></span>
       </div>
-      <div class="row" style="margin-top:10px;">
+      <div class="row" id="standardPackageUploadRow" style="margin-top:10px;">
         <input id="standardApkFile" type="file" accept=".apk,application/vnd.android.package-archive" style="display:none" />
-        <button id="standardUploadBtn" class="secondary" type="button">上传标准包 APK</button>
-        <span id="standardUploadName" class="muted">未选择文件</span>
+        <button id="standardUploadBtn" class="secondary" type="button">${t('standard.upload')}</button>
+        <span id="standardUploadName" class="muted">${t('standard.noFile')}</span>
+        <span id="standardUploadSpinner" class="inline-spinner" style="display:none" aria-hidden="true"></span>
       </div>
+      <div id="standardPackageReadonly" class="muted" style="margin-top:10px; display:none;"></div>
       <div id="standardPackageList" class="standard-package-list" style="margin-top:12px;"></div>
     </div>
     `
   );
+
+  if (!canAdmin) {
+    const uploadRow = document.getElementById('standardPackageUploadRow');
+    if (uploadRow) uploadRow.style.display = 'none';
+  }
 }
 
-export function createStandardPackageSection({ host }) {
+export function createStandardPackageSection({ host, canAdmin = true }) {
   const state = {
     items: [],
     activeStandardId: null,
     previousStandardId: null,
     disabledIds: [],
+    canAdmin: Boolean(canAdmin),
+    uploading: false,
   };
+
+  function setUploadBusy(isBusy) {
+    state.uploading = Boolean(isBusy);
+    const btn = document.getElementById('standardUploadBtn');
+    const spinner = document.getElementById('standardUploadSpinner');
+    if (btn) {
+      if (!btn.dataset.label) btn.dataset.label = btn.textContent || t('standard.upload');
+      btn.textContent = state.uploading ? t('standard.uploading') : btn.dataset.label;
+      btn.disabled = state.uploading;
+    }
+    if (spinner) spinner.style.display = state.uploading ? 'inline-block' : 'none';
+  }
 
   function normalizeDisplayName(name) {
     if (!name) return '';
@@ -45,8 +68,12 @@ export function createStandardPackageSection({ host }) {
   function render() {
     const list = document.getElementById('standardPackageList');
     if (!list) return;
+    if (!state.canAdmin) {
+      list.innerHTML = '';
+      return;
+    }
     if (!state.items.length) {
-      list.innerHTML = '<div class="muted">暂无标准包记录，请先上传 APK</div>';
+      list.innerHTML = `<div class="muted">${t('standard.empty')}</div>`;
       return;
     }
 
@@ -56,23 +83,23 @@ export function createStandardPackageSection({ host }) {
         const name = normalizeDisplayName(rawName);
         const isActive = state.activeStandardId === item.id;
         const badges = [];
-        if (isActive) badges.push('<span class="tag ok">当前标准包</span>');
-        if (state.previousStandardId === item.id) badges.push('<span class="tag warn">上一版本</span>');
-        if (state.disabledIds.includes(item.id)) badges.push('<span class="tag fail">已禁用</span>');
+        if (isActive) badges.push(`<span class="tag ok">${t('standard.current')}</span>`);
+        if (state.previousStandardId === item.id) badges.push(`<span class="tag warn">${t('standard.previous')}</span>`);
+        if (state.disabledIds.includes(item.id)) badges.push(`<span class="tag fail">${t('standard.disabled')}</span>`);
         return `
           <div class="standard-package-item">
             <div class="standard-package-main">
               <div class="standard-package-title">${name}</div>
               <div class="standard-package-id">ID: ${item.id}</div>
-              <div class="standard-package-meta">大小: ${formatBytes(Number(item.size || 0))}</div>
-              <div class="standard-package-meta">上传时间: ${fmtTime(item.createdAt)}</div>
+              <div class="standard-package-meta">${t('standard.size', { size: formatBytes(Number(item.size || 0)) })}</div>
+              <div class="standard-package-meta">${t('standard.uploadedAt', { time: fmtTime(item.createdAt) })}</div>
               <div class="standard-package-badges">${badges.join('')}</div>
             </div>
             <div class="standard-package-actions">
               <button class="secondary ${isActive ? 'is-active' : ''}" type="button" data-action="set-standard" data-id="${item.id}" ${isActive ? 'disabled' : ''}>
-                ${isActive ? '已设为标准包' : '设为标准包'}
+                ${isActive ? t('standard.setCurrentDone') : t('standard.setCurrent')}
               </button>
-              <button class="secondary" type="button" data-action="delete" data-id="${item.id}">删除</button>
+              <button class="secondary" type="button" data-action="delete" data-id="${item.id}">${t('standard.delete')}</button>
             </div>
           </div>
         `;
@@ -80,10 +107,30 @@ export function createStandardPackageSection({ host }) {
       .join('');
   }
 
+  function renderReadonly(config) {
+    const readonly = document.getElementById('standardPackageReadonly');
+    if (!readonly) return;
+    const active = config?.standardLibraryItemId || '';
+    readonly.style.display = 'block';
+    readonly.textContent = active
+      ? t('standard.currentId', { id: active })
+      : t('standard.currentNone');
+  }
+
   async function load() {
+    if (!state.canAdmin) {
+      console.info('[APK-REBUILDER] call /plugin/standard-package (readonly)');
+      const res = await host.authFetch('/plugin/standard-package');
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || t('standard.fetchFailed'));
+      renderReadonly(json?.data || json);
+      return;
+    }
+
+    console.info('[APK-REBUILDER] call /plugin/admin/apk-library');
     const res = await host.authFetch('/plugin/admin/apk-library');
     const json = await res.json();
-    if (!res.ok) throw new Error(json?.error?.message || '标准包列表获取失败');
+    if (!res.ok) throw new Error(json?.error?.message || t('standard.listFailed'));
     const data = json?.data || json;
     state.items = data.items || [];
     state.activeStandardId = data.standard?.activeStandardId || null;
@@ -93,40 +140,51 @@ export function createStandardPackageSection({ host }) {
   }
 
   async function setStandard(itemId) {
+    console.info('[APK-REBUILDER] call /plugin/admin/standard-package', { itemId });
     const res = await host.authFetch('/plugin/admin/standard-package', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ standardLibraryItemId: itemId }),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.error?.message || '标准包设置失败');
+    if (!res.ok) throw new Error(json?.error?.message || t('standard.setFailed'));
     await load();
   }
 
   async function deleteItem(itemId) {
-    if (!confirm('确认删除该 APK 标准包吗？')) return;
+    const ok = await showConfirm(t('standard.confirmDelete'));
+    if (!ok) return;
+    console.info('[APK-REBUILDER] call /plugin/admin/apk-library/:itemId', { itemId });
     const res = await host.authFetch(`/plugin/admin/apk-library/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.error?.message || '删除失败');
+    if (!res.ok) throw new Error(json?.error?.message || t('standard.deleteFailed'));
     await load();
   }
 
   async function uploadStandard(file) {
     if (!file) return;
+    if (state.uploading) return;
     const fileName = String(file.name || '').toLowerCase();
     if (!fileName.endsWith('.apk')) {
-      alert('仅支持 APK 文件');
+      await showAlert(t('standard.onlyApk'));
       return;
     }
     const form = new FormData();
     form.append('apk', file);
-    const res = await host.authFetch('/api/upload', { method: 'POST', body: form });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.error?.message || '上传失败');
-    await load();
+    console.info('[APK-REBUILDER] call /api/upload');
+    setUploadBusy(true);
+    try {
+      const res = await host.authFetch('/api/upload', { method: 'POST', body: form });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error?.message || '上传失败');
+      await load();
+    } finally {
+      setUploadBusy(false);
+    }
   }
 
   function bind() {
+    if (!state.canAdmin) return;
     const uploadBtn = document.getElementById('standardUploadBtn');
     const uploadInput = document.getElementById('standardApkFile');
     const uploadName = document.getElementById('standardUploadName');
@@ -135,9 +193,9 @@ export function createStandardPackageSection({ host }) {
       uploadBtn.addEventListener('click', () => uploadInput.click());
       uploadInput.addEventListener('change', () => {
         const file = uploadInput.files?.[0];
-        if (uploadName) uploadName.textContent = file?.name || '未选择文件';
+        if (uploadName) uploadName.textContent = file?.name || t('standard.noFile');
         if (file) {
-          uploadStandard(file).catch((e) => alert(e.message || '上传失败'));
+          uploadStandard(file).catch((e) => showAlert(e.message || t('standard.uploadFailed')));
         }
       });
     }
@@ -151,9 +209,9 @@ export function createStandardPackageSection({ host }) {
         const id = target.getAttribute('data-id');
         if (!action || !id) return;
         if (action === 'set-standard') {
-          setStandard(id).catch((err) => alert(err.message || '设置失败'));
+          setStandard(id).catch((err) => showAlert(err.message || t('standard.setFailed')));
         } else if (action === 'delete') {
-          deleteItem(id).catch((err) => alert(err.message || '删除失败'));
+          deleteItem(id).catch((err) => showAlert(err.message || t('standard.deleteFailed')));
         }
       });
     }

@@ -1,22 +1,73 @@
 export function createEmbedHost() {
+  const debug =
+    new URLSearchParams(window.location.search).get('debug') === '1' ||
+    localStorage.getItem('apk-rebuilder-debug') === '1';
+  const log = (...args) => {
+    if (debug) console.info('[APK-REBUILDER]', ...args);
+  };
+  const logAlways = (...args) => console.info('[APK-REBUILDER]', ...args);
   const state = {
     apiBase: '',
     tenantId: '',
-    pluginAuth: '',
+    token: '',
+    config: {},
+    hostApiBase: '',
   };
+  let parentOrigin = '*';
+  let initResolved = false;
+  let initResolve;
+  const initReady = new Promise((resolve) => {
+    initResolve = resolve;
+  });
+
+  function ensureInit(timeout = 2000) {
+    if (initResolved) return Promise.resolve();
+    return Promise.race([
+      initReady,
+      new Promise((resolve) =>
+        setTimeout(() => {
+          logAlways('INIT wait timeout');
+          resolve();
+        }, timeout)
+      ),
+    ]);
+  }
 
   function applyInit(payload = {}) {
-    if (payload.apiBase) state.apiBase = String(payload.apiBase).trim();
-    if (payload.tenantId) state.tenantId = String(payload.tenantId).trim();
-    if (payload.pluginAuth) state.pluginAuth = String(payload.pluginAuth).trim();
+    if (payload.token) state.token = String(payload.token).trim();
+    if (payload.config && typeof payload.config === 'object') {
+      state.config = payload.config || {};
+    }
+    const cfg = state.config || {};
+    const apiBase = cfg.apiBase || cfg.api_base || payload.apiBase;
+    const tenantId = cfg.tenantId || cfg.tenant_id || payload.tenantId;
+    const hostApiBase = cfg.hostApiBase || cfg.mainApiBase || cfg.host_api_base || payload.hostApiBase;
+    if (apiBase) state.apiBase = String(apiBase).trim();
+    if (tenantId) state.tenantId = String(tenantId).trim();
+    if (hostApiBase) state.hostApiBase = String(hostApiBase).trim();
+    logAlways('INIT received', {
+      apiBase: state.apiBase,
+      tenantId: state.tenantId,
+      hostApiBase: state.hostApiBase,
+      token: state.token ? `${state.token.slice(0, 6)}...` : '',
+    });
+    if (!state.token) {
+      logAlways('WARN: INIT token is empty');
+    }
+    if (!initResolved) {
+      initResolved = true;
+      initResolve?.();
+    }
   }
 
   function applyUrlParams() {
     const params = new URLSearchParams(window.location.search);
     const apiBase = params.get('apiBase');
     const tenantId = params.get('tenantId');
+    const hostApiBase = params.get('hostApiBase');
     if (apiBase) state.apiBase = apiBase;
     if (tenantId) state.tenantId = tenantId;
+    if (hostApiBase) state.hostApiBase = hostApiBase;
   }
 
   function buildUrl(path) {
@@ -27,20 +78,155 @@ export function createEmbedHost() {
     return `${base}${path.startsWith('/') ? path : `/${path}`}`;
   }
 
+  function buildHostUrl(path) {
+    if (!path) return state.hostApiBase || '';
+    if (path.startsWith('http')) return path;
+    const base = state.hostApiBase || '';
+    if (!base) return path;
+    return `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+
+  async function logResponse(label, res) {
+    if (!res) return;
+    const info = {
+      status: res.status,
+      ok: res.ok,
+      url: res.url,
+    };
+    const contentType = res.headers?.get?.('content-type') || '';
+    if (contentType) info.contentType = contentType;
+    logAlways(`${label} response`, info);
+
+    if (!debug) return;
+    try {
+      const clone = res.clone();
+      const text = await clone.text();
+      const preview = text.length > 500 ? `${text.slice(0, 500)}...` : text;
+      if (preview) log('response body preview', preview);
+    } catch (err) {
+      log('response body read failed', String(err));
+    }
+  }
+
+  async function requestParentTokenRefresh(timeout = 3000) {
+    return await new Promise((resolve) => {
+      let settled = false;
+      const onMessage = (event) => {
+        if (event.source !== window.parent) return;
+        const { type, payload } = event.data || {};
+        if (type === 'TOKEN_UPDATE' && payload?.token) {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          window.removeEventListener('message', onMessage);
+          logAlways('TOKEN_UPDATE received (refresh)', {
+            token: payload.token ? `${String(payload.token).slice(0, 6)}...` : '',
+          });
+          resolve({ token: payload.token });
+        }
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('message', onMessage);
+        logAlways('TOKEN_REFRESH_REQUEST timeout');
+        resolve(null);
+      }, timeout);
+      window.addEventListener('message', onMessage);
+      logAlways('TOKEN_REFRESH_REQUEST -> parent');
+      window.parent.postMessage({ type: 'TOKEN_REFRESH_REQUEST' }, parentOrigin);
+    });
+  }
+
   async function authFetch(path, options = {}) {
+    await ensureInit();
     const headers = new Headers(options.headers || {});
-    if (state.pluginAuth) headers.set('authorization', `Bearer ${state.pluginAuth}`);
+    if (state.token) headers.set('authorization', `Bearer ${state.token}`);
     if (state.tenantId) headers.set('x-tenant-id', state.tenantId);
-    return fetch(buildUrl(path), { ...options, headers });
+    logAlways('authFetch', { path: String(path), token: !!state.token });
+    let res;
+    try {
+      res = await fetch(buildUrl(path), { ...options, headers });
+      await logResponse('authFetch', res);
+    } catch (err) {
+      logAlways('authFetch error', { path: String(path), error: String(err) });
+      throw err;
+    }
+    if (res.status !== 401) return res;
+
+    const refreshed = await requestParentTokenRefresh();
+    if (!refreshed || !refreshed.token) {
+      window.parent.postMessage({ type: 'TOKEN_EXPIRED' }, parentOrigin);
+      return res;
+    }
+    state.token = String(refreshed.token).trim();
+    const retryHeaders = new Headers(options.headers || {});
+    retryHeaders.set('authorization', `Bearer ${state.token}`);
+    if (state.tenantId) retryHeaders.set('x-tenant-id', state.tenantId);
+    try {
+      const retryRes = await fetch(buildUrl(path), { ...options, headers: retryHeaders });
+      await logResponse('authFetch retry', retryRes);
+      return retryRes;
+    } catch (err) {
+      logAlways('authFetch retry error', { path: String(path), error: String(err) });
+      throw err;
+    }
+  }
+
+  async function hostFetch(path, options = {}) {
+    await ensureInit();
+    const headers = new Headers(options.headers || {});
+    if (state.token) headers.set('authorization', `Bearer ${state.token}`);
+    logAlways('hostFetch', { path: String(path), token: !!state.token });
+    let res;
+    try {
+      res = await fetch(buildHostUrl(path), { ...options, headers });
+      await logResponse('hostFetch', res);
+    } catch (err) {
+      logAlways('hostFetch error', { path: String(path), error: String(err) });
+      throw err;
+    }
+    if (res.status !== 401) return res;
+
+    const refreshed = await requestParentTokenRefresh();
+    if (!refreshed || !refreshed.token) {
+      window.parent.postMessage({ type: 'TOKEN_EXPIRED' }, parentOrigin);
+      return res;
+    }
+    state.token = String(refreshed.token).trim();
+    const retryHeaders = new Headers(options.headers || {});
+    retryHeaders.set('authorization', `Bearer ${state.token}`);
+    try {
+      const retryRes = await fetch(buildHostUrl(path), { ...options, headers: retryHeaders });
+      await logResponse('hostFetch retry', retryRes);
+      return retryRes;
+    } catch (err) {
+      logAlways('hostFetch retry error', { path: String(path), error: String(err) });
+      throw err;
+    }
   }
 
   window.addEventListener('message', (e) => {
     const msg = e.data || {};
+    if (e.origin) parentOrigin = e.origin;
     if (msg.type === 'INIT' && msg.payload) {
+      logAlways('postMessage <- INIT', { origin: e.origin });
       applyInit(msg.payload);
+      if (window.parent) {
+        logAlways('postMessage -> PLUGIN_READY', { origin: parentOrigin });
+        window.parent.postMessage(
+          { type: 'PLUGIN_READY', id: `ready-${Date.now()}` },
+          parentOrigin
+        );
+      }
     }
     if (msg.type === 'TOKEN_UPDATE' && msg.payload) {
-      if (msg.payload.pluginAuth) state.pluginAuth = String(msg.payload.pluginAuth).trim();
+      if (msg.payload.token) state.token = String(msg.payload.token).trim();
+      logAlways('TOKEN_UPDATE', { token: state.token ? `${state.token.slice(0, 6)}...` : '' });
+    }
+    if (msg.type === 'DESTROY') {
+      logAlways('DESTROY received');
+      state.token = '';
     }
   });
 
@@ -51,5 +237,6 @@ export function createEmbedHost() {
     applyInit,
     buildUrl,
     authFetch,
+    hostFetch,
   };
 }

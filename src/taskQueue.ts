@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
-import { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD } from './config';
+import { REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_CONNECT_RETRY_DELAY_MS, REDIS_CONNECT_TIMEOUT_MS } from './config';
 import { runDecompileTask, runModTask } from './buildService';
 import { getTask, setTaskError } from './taskStore';
 import { ModPayload } from './types';
@@ -12,12 +12,24 @@ const connection = new Redis({
     maxRetriesPerRequest: null,
 });
 
+const redisState = {
+    ready: false,
+    lastError: '',
+    lastErrorAt: 0,
+};
+
 console.info(`[Redis] Connecting to ${REDIS_HOST}:${REDIS_PORT}`);
 connection.on('ready', () => {
     console.info('[Redis] Connection ready');
+    redisState.ready = true;
+    redisState.lastError = '';
+    redisState.lastErrorAt = 0;
 });
 connection.on('error', (err) => {
     console.error('[Redis] Error connecting to Redis:', err.message);
+    redisState.ready = false;
+    redisState.lastError = err.message || 'unknown';
+    redisState.lastErrorAt = Date.now();
 });
 
 export const modQueue = new Queue('apk-mod', { connection: connection as any });
@@ -66,3 +78,30 @@ modWorker.on('completed', (job) => {
 modWorker.on('failed', (job, err) => {
     console.error(`[BullMQ] Job ${job?.id} has failed with ${err?.message}`);
 });
+
+export function getRedisStatus(): { ready: boolean; lastError: string; lastErrorAt: number } {
+    return { ...redisState };
+}
+
+export async function ensureRedisReady(timeoutMs = REDIS_CONNECT_TIMEOUT_MS): Promise<void> {
+    if (redisState.ready) return;
+    const startedAt = Date.now();
+    let lastError = '';
+    while (Date.now() - startedAt < timeoutMs) {
+        try {
+            await connection.ping();
+            redisState.ready = true;
+            redisState.lastError = '';
+            redisState.lastErrorAt = 0;
+            return;
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            lastError = message;
+            redisState.ready = false;
+            redisState.lastError = message;
+            redisState.lastErrorAt = Date.now();
+            await new Promise(resolve => setTimeout(resolve, REDIS_CONNECT_RETRY_DELAY_MS));
+        }
+    }
+    throw new Error(`Redis not ready after ${timeoutMs}ms${lastError ? ` (${lastError})` : ''}`);
+}

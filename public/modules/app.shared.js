@@ -1,35 +1,14 @@
 import { state, $, setText, norm, setIcon, api, fileToBase64 } from './state.js';
+import { t } from './i18n.js';
 import { renderUploadSection, bindUploadSection, setUploadBusy } from './sections/upload.js';
 import { renderPackageInfoSection, bindPackageInfoSection } from './sections/package-info.js';
 import { renderFilePatchSection, createFilePatchSection } from './sections/file-patch.js';
 import { renderBuildSection, bindBuildSection, renderModProgress } from './sections/build.js';
-import { renderLogsSection } from './sections/logs.js';
 import { renderApkLibraryDrawer, createApkLibraryDrawer } from './drawers/apk-library.js';
 import { renderFileBrowserDrawer, createFileBrowserDrawer } from './drawers/file-browser.js';
 import { renderIconEditorModal, createIconEditor } from './modals/icon-editor.js';
 import { renderToolsCheck, createToolsCheck } from './tools/check-tools.js';
-
-function renderHeader(container, { showToolsCheck }) {
-  container.insertAdjacentHTML(
-    'beforeend',
-    `
-    <div class="card" id="sectionHeader">
-      <div class="toolbar">
-        <div>
-          <h1>APK Rebuilder</h1>
-          <div class="muted">用于上传 APK、修改包信息与 Unity 参数，并自动重构建签名下载的可视化工具。</div>
-        </div>
-        <div id="toolsCheckSlot"></div>
-      </div>
-    </div>
-    `
-  );
-
-  if (showToolsCheck) {
-    const slot = document.getElementById('toolsCheckSlot');
-    if (slot) renderToolsCheck(slot);
-  }
-}
+import { renderHeader } from './sections/header.js';
 
 function inferStageFromLogs(logs) {
   const last = (logs || []).slice(-8).join('\n');
@@ -39,7 +18,15 @@ function inferStageFromLogs(logs) {
   return state.activeFlow === 'mod' ? 'modify' : 'parse';
 }
 
-export function initApp({ showDrawers = true, showToolsCheck = true, showFilePatch = true, showIconEditor = true } = {}) {
+export function initApp({
+  showDrawers = true,
+  showToolsCheck = true,
+  showFilePatch = true,
+  showIconEditor = true,
+  headerTitle = 'APK Rebuilder',
+  headerSubtitle = t('header.subtitle.full'),
+  showHeaderSubtitle = true,
+} = {}) {
   const root = document.getElementById('app') || document.body;
 
   if (showDrawers) {
@@ -51,12 +38,21 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
   wrap.className = 'wrap';
   root.appendChild(wrap);
 
-  renderHeader(wrap, { showToolsCheck });
+  renderHeader(wrap, {
+    title: headerTitle,
+    subtitle: headerSubtitle,
+    showSubtitle: showHeaderSubtitle,
+    showToolsCheck,
+  });
+
+  if (showToolsCheck) {
+    const slot = document.getElementById('toolsCheckSlot');
+    if (slot) renderToolsCheck(slot);
+  }
   renderUploadSection(wrap);
   renderPackageInfoSection(wrap);
   if (showFilePatch) renderFilePatchSection(wrap);
   renderBuildSection(wrap);
-  renderLogsSection(wrap);
   if (showIconEditor) renderIconEditorModal(document.body);
 
   const tools = showToolsCheck ? createToolsCheck({ state, api }) : null;
@@ -95,7 +91,7 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
       norm(info.versionName) !== norm(next.versionName),
       norm(info.versionCode) !== norm(next.versionCode),
     ].filter(Boolean).length;
-    setText('changedCount', `字段变更 ${changes} 项`);
+    setText('changedCount', t('pkg.changedCount', { count: changes }));
 
     const srcIcon = info.iconUrl || '';
     const newIcon = state.iconPreviewUrl || srcIcon;
@@ -117,12 +113,12 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
     const search = $('fileTreeSearch');
     if (search) search.value = '';
     const fileMeta = $('fileMeta');
-    if (fileMeta) fileMeta.textContent = '请选择文件查看内容';
+    if (fileMeta) fileMeta.textContent = t('fileBrowser.selectFilePrompt');
     const fileContent = $('fileContent');
-    if (fileContent) fileContent.textContent = '请选择左侧文件';
+    if (fileContent) fileContent.textContent = t('fileBrowser.selectLeftPrompt');
     filePatch?.renderFilePathSuggestions?.();
     fileDrawer?.renderFileTree?.();
-    iconModal?.setIconSelection?.(null, '', '未选择任何文件');
+    iconModal?.setIconSelection?.(null, '', t('pkg.noFile'));
     state.modProgress = 'idle';
     setText('taskId', state.id);
     fileDrawer?.renderCurrentBrowseApk?.();
@@ -151,7 +147,14 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
     }
     state.apkInfo = data.apkInfo || null;
     const logsEl = $('logs');
-    if (logsEl) logsEl.value = (data.logs || []).join('\n');
+    if (logsEl) {
+      if (logsEl.tagName === 'TEXTAREA') {
+        logsEl.value = (data.logs || []).join('\n');
+      } else if (logsEl.tagName === 'PRE' && state.id === activeTaskId) {
+        // If the premium log viewer is viewing the same task, it handles its own updates
+        // but we can sync here if needed for immediate feedback.
+      }
+    }
 
     if (state.apkInfo) {
       const appName = $('appName');
@@ -208,7 +211,7 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
     if (!file) return;
     const fileName = String(file.name || '').toLowerCase();
     if (!fileName.endsWith('.apk')) {
-      alert('仅支持 APK 文件');
+      alert(t('upload.onlyApk'));
       return;
     }
 
@@ -228,7 +231,7 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
   }
 
   async function modBuild() {
-    if (!state.id) return alert('请先上传并解析 APK');
+    if (!state.id) return alert(t('upload.needUpload'));
     state.activeFlow = 'mod';
     state.stage = 'modify';
     state.modProgress = 'modify';
@@ -270,7 +273,7 @@ export function initApp({ showDrawers = true, showToolsCheck = true, showFilePat
   bindPackageInfoSection({
     onInputChange: renderCompare,
     onPickIcon: (file) => iconModal?.prepareIconEditor?.(file).catch(() => {
-      alert('无法读取该图标文件，请更换后重试');
+      alert(t('icon.readFail'));
       const iconFile = $('iconFile');
       if (iconFile) iconFile.value = '';
     })

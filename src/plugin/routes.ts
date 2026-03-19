@@ -5,7 +5,8 @@ import { randomUUID } from 'node:crypto';
 import multer from 'multer';
 import { modQueue } from '../taskQueue';
 import { ApkLibraryItem } from '../types';
-import { getLoosePrincipal, requireScope } from './auth';
+import { getLoosePrincipal } from './auth';
+import { requireHostPermission } from './hostAuth';
 import {
   ok,
   fail,
@@ -30,6 +31,17 @@ import { MOD_UPLOAD_DIR } from '../config';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+function applyCors(req: Request, res: Response): void {
+  const origin = req.header('origin');
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Tenant-Id');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+}
+
 export function createPluginRouter(): Router {
   const router = Router();
 
@@ -40,7 +52,7 @@ export function createPluginRouter(): Router {
   router.post('/execute', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
-      requireScope(principal, 'apk.mod.run');
+      await requireHostPermission(req, 'apk.rebuilder.run');
 
       const body = (req.body || {}) as Record<string, unknown>;
       const source = (body.input as any)?.source;
@@ -60,23 +72,13 @@ export function createPluginRouter(): Router {
       }
 
       validateModifications(modifications);
-      const payload = await buildModPayload(principal.tenantId, modifications);
-      if (!hasAnyModification(payload)) {
-        fail(
-          res,
-          400,
-          'At least one field is required: appName, packageName, versionName, versionCode, icon, unityPatches, filePatches',
-          'BAD_REQUEST',
-        );
-        return;
-      }
 
       let task;
       let cacheHit = false;
       if (libraryItemId) {
         let resolvedId = libraryItemId;
         if (useStandardPackage) {
-        const resolved = resolveStandardLibraryItem(principal.tenantId);
+          const resolved = resolveStandardLibraryItem(principal.tenantId);
           if (!resolved.libraryItemId) {
             fail(res, 409, resolved.reason || 'STANDARD_PACKAGE_NOT_AVAILABLE', 'STANDARD_PACKAGE_NOT_AVAILABLE');
             return;
@@ -84,7 +86,7 @@ export function createPluginRouter(): Router {
           resolvedId = resolved.libraryItemId;
         }
 
-      const item = getApkItem(resolvedId, principal.tenantId);
+        const item = getApkItem(resolvedId, principal.tenantId);
         if (!item) {
           fail(res, 404, 'APK not found in library', 'NOT_FOUND');
           return;
@@ -94,6 +96,21 @@ export function createPluginRouter(): Router {
         cacheHit = result.cacheHit;
       } else {
         task = createTaskFromArtifact(artifactId, principal.tenantId, principal.userId);
+      }
+
+      // Now we have a task, we can log the host interaction that just happened
+      logTask(task, `[Host] Permission verified: apk.rebuilder.run`);
+
+      // Build payload with task context for communication logging
+      const payload = await buildModPayload(principal.tenantId, modifications, task);
+      if (!hasAnyModification(payload)) {
+        fail(
+          res,
+          400,
+          'At least one field is required: appName, packageName, versionName, versionCode, icon, unityPatches, filePatches',
+          'BAD_REQUEST',
+        );
+        return;
       }
 
       task.status = 'queued';
@@ -110,10 +127,10 @@ export function createPluginRouter(): Router {
     }
   });
 
-  router.post('/icon-upload', upload.single('icon'), (req: Request, res: Response) => {
+  router.post('/icon-upload', upload.single('icon'), async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
-      requireScope(principal, 'apk.mod.run');
+      await requireHostPermission(req, 'apk.rebuilder.run');
       const file = (req as any).file as { originalname: string; mimetype: string; buffer: Buffer } | undefined;
       if (!file) {
         fail(res, 400, 'Missing icon file', 'BAD_REQUEST');
@@ -144,10 +161,10 @@ export function createPluginRouter(): Router {
   });
 
   // Public read-only standard package config (used by embed form)
-  router.get('/standard-package', (req: Request, res: Response) => {
+  router.get('/standard-package', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
-      requireScope(principal, 'apk.mod.read');
+      await requireHostPermission(req, 'apk.rebuilder.read');
       const config = readStandardPackageConfig(principal.tenantId);
       ok(res, {
         standardLibraryItemId: config.activeStandardId,
@@ -161,9 +178,10 @@ export function createPluginRouter(): Router {
   });
 
   // Admin standard package management
-  router.get('/admin/standard-package', (req: Request, res: Response) => {
+  router.get('/admin/standard-package', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
+      await requireHostPermission(req, 'apk.rebuilder.admin');
       ok(res, readStandardPackageConfig(principal.tenantId));
     } catch (error) {
       const mapped = mapPluginError(error);
@@ -171,9 +189,10 @@ export function createPluginRouter(): Router {
     }
   });
 
-  router.get('/admin/apk-library', (req: Request, res: Response) => {
+  router.get('/admin/apk-library', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
+      await requireHostPermission(req, 'apk.rebuilder.admin');
       const config = readStandardPackageConfig(principal.tenantId);
       ok(res, {
         items: listApkItems(principal.tenantId),
@@ -189,9 +208,10 @@ export function createPluginRouter(): Router {
     }
   });
 
-  router.delete('/admin/apk-library/:itemId', (req: Request, res: Response) => {
+  router.delete('/admin/apk-library/:itemId', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
+      await requireHostPermission(req, 'apk.rebuilder.admin');
       const itemId = String(req.params.itemId || '').trim();
       if (!itemId) {
         fail(res, 400, 'itemId is required', 'BAD_REQUEST');
@@ -219,9 +239,10 @@ export function createPluginRouter(): Router {
     }
   });
 
-  router.put('/admin/standard-package', (req: Request, res: Response) => {
+  router.put('/admin/standard-package', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
+      await requireHostPermission(req, 'apk.rebuilder.admin');
       const current = readStandardPackageConfig(principal.tenantId);
       const now = Date.now();
       if (current.lockedUntil && now < current.lockedUntil) {
@@ -247,10 +268,10 @@ export function createPluginRouter(): Router {
     }
   });
 
-  router.get('/runs/:runId', (req: Request, res: Response) => {
+  router.get('/runs/:runId', async (req: Request, res: Response) => {
     try {
       const principal = getLoosePrincipal(req);
-      requireScope(principal, 'apk.mod.read');
+      await requireHostPermission(req, 'apk.rebuilder.read');
 
       const task = getTaskForTenant(String(req.params['runId']), principal.tenantId);
       if (!task) {
@@ -284,18 +305,55 @@ export function createPluginRouter(): Router {
     }
   });
 
-  router.get('/artifacts/:artifactId', (req: Request, res: Response) => {
+  router.get('/artifacts/:artifactId', async (req: Request, res: Response) => {
+    applyCors(req, res);
+    if (!req.header('authorization') && req.query?.token) {
+      const token = String(req.query.token || '').trim();
+      if (token) {
+        (req as any).headers = {
+          ...req.headers,
+          authorization: `Bearer ${token}`,
+        };
+      }
+    }
     try {
       const principal = getLoosePrincipal(req);
-      requireScope(principal, 'apk.mod.read');
+      await requireHostPermission(req, 'apk.rebuilder.read');
       const artifactId = String(req.params['artifactId']);
       const localPath = fetchArtifactToLocal(artifactId, principal.tenantId);
       const artifact = getArtifact(artifactId, principal.tenantId);
-      res.download(localPath, artifact?.name || path.basename(localPath));
+
+      const shouldInline = String(req.query['raw'] || '').toLowerCase() === 'true';
+      if (shouldInline) {
+        res.setHeader('Content-Type', artifact?.mimeType || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `inline; filename="${artifact?.name || path.basename(localPath)}"`);
+        res.sendFile(localPath, (sendError) => {
+          if (sendError) {
+            console.error('[APK-REBUILDER] artifact inline stream failed', sendError);
+          }
+        });
+        return;
+      }
+
+      res.download(localPath, artifact?.name || path.basename(localPath), (downloadError) => {
+        if (downloadError) {
+          if (!res.headersSent) {
+            const mapped = mapPluginError(downloadError);
+            fail(res, mapped.status, mapped.message, mapped.code);
+          } else {
+            console.error('[APK-REBUILDER] artifact download streaming failed', downloadError);
+          }
+        }
+      });
     } catch (error) {
       const mapped = mapPluginError(error);
       fail(res, mapped.status, mapped.message, mapped.code);
     }
+  });
+
+  router.options('/artifacts/:artifactId', (req: Request, res: Response) => {
+    applyCors(req, res);
+    res.status(204).end();
   });
 
   return router;

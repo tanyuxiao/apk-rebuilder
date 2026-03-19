@@ -1,4 +1,5 @@
 import { createPatchId, escapeHtml, formatBytes } from '../state.js';
+import { t } from '../i18n.js';
 
 function createFilePatchTask() {
   return {
@@ -7,7 +8,7 @@ function createFilePatchTask() {
     collapsed: false,
     path: '',
     method: 'edit',
-    loadStatusText: '未读取文件',
+    loadStatusText: t('patch.loadStatus.notLoaded'),
     loadStatusKind: '',
     originalContent: '',
     modifiedContent: '',
@@ -15,15 +16,15 @@ function createFilePatchTask() {
     replaceText: '',
     matchRegex: false,
     replaceFile: null,
-    replaceFileName: '未选择任何文件',
+    replaceFileName: t('patch.noReplaceFile'),
   };
 }
 
 function getSupportedModeLabel(editable, replaceable) {
-  if (editable && replaceable) return '可编辑 / 可替换';
-  if (editable) return '可编辑';
-  if (replaceable) return '仅可替换';
-  return '不可修改';
+  if (editable && replaceable) return t('patch.method.editableReplaceable');
+  if (editable) return t('patch.method.editable');
+  if (replaceable) return t('patch.method.replaceable');
+  return t('patch.method.readonly');
 }
 
 export function renderFilePatchSection(container) {
@@ -110,32 +111,32 @@ export function createFilePatchSection({ state, api }) {
               <div style="display:${task.method === 'edit' ? 'block' : 'none'};">
                 <div class="unity-grid">
                   <div>
-                    <div class="muted" style="margin-bottom:6px;">原文件内容（只读）</div>
+                    <div class="muted" style="margin-bottom:6px;">${t('patch.originalContent')}</div>
                     <textarea readonly data-field="originalContent">${escapeHtml(task.originalContent || '')}</textarea>
                   </div>
                   <div>
-                    <div class="muted" style="margin-bottom:6px;">修改后内容（可编辑）</div>
-                    <textarea data-field="modifiedContent" placeholder="读取文件后可直接编辑替换">${escapeHtml(task.modifiedContent || '')}</textarea>
+                    <div class="muted" style="margin-bottom:6px;">${t('patch.modifiedContent')}</div>
+                    <textarea data-field="modifiedContent" placeholder="${t('patch.placeholder.editAfterLoad')}">${escapeHtml(task.modifiedContent || '')}</textarea>
                   </div>
                 </div>
                 <div class="grid" style="margin-top:8px;">
-                  <div class="field"><label>匹配文本</label><input type="text" data-field="matchText" value="${escapeHtml(task.matchText || '')}" /></div>
-                  <div class="field"><label>替换文本</label><input type="text" data-field="replaceText" value="${escapeHtml(task.replaceText || '')}" /></div>
+                  <div class="field"><label>${t('patch.matchText')}</label><input type="text" data-field="matchText" value="${escapeHtml(task.matchText || '')}" /></div>
+                  <div class="field"><label>${t('patch.replaceText')}</label><input type="text" data-field="replaceText" value="${escapeHtml(task.replaceText || '')}" /></div>
                 </div>
                 <div class="row" style="margin-top:4px;">
                   <label class="muted" style="display:flex; align-items:center; gap:6px;">
-                    <input type="checkbox" data-field="matchRegex" ${task.matchRegex ? 'checked' : ''} /> 正则表达式
+                    <input type="checkbox" data-field="matchRegex" ${task.matchRegex ? 'checked' : ''} /> ${t('patch.regex')}
                   </label>
                 </div>
               </div>
 
               <div style="display:${task.method === 'replace' ? 'block' : 'none'}; margin-top:8px;">
                 <div class="field">
-                  <label>选择替换文件</label>
+                  <label>${t('patch.pickReplace')}</label>
                   <div class="file-pick">
                     <input type="file" data-action="replace-file-input" />
-                    <button class="secondary" type="button" data-action="pick-replace-file">选择文件</button>
-                    <span class="file-name">${escapeHtml(task.replaceFileName || '未选择任何文件')}</span>
+                    <button class="secondary" type="button" data-action="pick-replace-file">${t('patch.pickReplace')}</button>
+                    <span class="file-name">${escapeHtml(task.replaceFileName || t('patch.noReplaceFile'))}</span>
                   </div>
                 </div>
               </div>
@@ -150,15 +151,15 @@ export function createFilePatchSection({ state, api }) {
     const task = getFilePatchTask(taskId);
     if (!task) return;
     if (!state.id) {
-      if (!silent) alert('请先上传并解析 APK');
+      if (!silent) alert(t('upload.needUpload'));
       return;
     }
     const editPath = String(task.path || '').trim();
     if (!editPath) {
-      task.loadStatusText = '读取失败：请先填写目标文件路径';
+      task.loadStatusText = t('patch.pathUnset');
       task.loadStatusKind = 'fail';
       renderPatchQueue();
-      if (!silent) alert('请先填写目标文件路径');
+      if (!silent) alert(t('patch.pathUnset'));
       return;
     }
     try {
@@ -170,11 +171,11 @@ export function createFilePatchSection({ state, api }) {
       if (!data.editable) {
         task.method = 'replace';
       }
-      task.loadStatusText = `读取成功：${normalizedPath} | ${formatBytes(Number(data.size || 0))} | ${getSupportedModeLabel(Boolean(data.editable), Boolean(data.replaceable ?? true))}`;
+      task.loadStatusText = `${t('patch.loadFile')}: ${normalizedPath} | ${formatBytes(Number(data.size || 0))} | ${getSupportedModeLabel(Boolean(data.editable), Boolean(data.replaceable ?? true))}`;
       task.loadStatusKind = 'ok';
       renderPatchQueue();
     } catch (e) {
-      task.loadStatusText = `读取失败：${e?.message || '未知错误'}`;
+      task.loadStatusText = `${t('patch.loadFileFailed')}: ${e?.message || 'Unknown error'}`;
       task.loadStatusKind = 'fail';
       renderPatchQueue();
       if (!silent) throw e;
@@ -224,7 +225,7 @@ export function createFilePatchSection({ state, api }) {
         if (patch.mode === 'file_replace') {
           const file = patch.replacementFile;
           if (!file) {
-            throw new Error(`替换任务缺少文件: ${patch.path}`);
+            throw new Error(t('patch.replaceMissing', { path: patch.path }));
           }
           result.push({
             path: patch.path,
@@ -275,11 +276,11 @@ export function createFilePatchSection({ state, api }) {
     if (createBtn) {
       createBtn.addEventListener('click', () => {
         if (!state.id) {
-          alert('请先上传 APK 或从左侧选择一个已上传安装包');
+          alert(t('patch.selectFileToEdit'));
           return;
         }
         if (state.status !== 'success') {
-          alert('当前 APK 尚未解析完成，请稍后再创建任务');
+          alert(t('patch.notReady'));
           return;
         }
         state.filePatchTasks.push(createFilePatchTask());
@@ -290,7 +291,7 @@ export function createFilePatchSection({ state, api }) {
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         if (!state.filePatchTasks.length) return;
-        if (!confirm('确认清空所有修改任务吗？')) return;
+        if (!confirm(t('patch.confirmClear'))) return;
         state.filePatchTasks = [];
         renderPatchQueue();
       });

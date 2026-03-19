@@ -86,6 +86,9 @@ async function run() {
 
   const host = process.env.REDIS_HOST || '127.0.0.1';
   const port = Number(process.env.REDIS_PORT || 6379);
+  const pluginMode = String(process.env.PLUGIN_MODE || 'false');
+  const uiMode = String(process.env.APK_REBUILDER_UI_MODE || 'full');
+  console.log(`[self-check] Config pluginMode=${pluginMode} uiMode=${uiMode} redisHost=${host} redisPort=${port}`);
   console.log('[self-check] Redis');
   try {
     const redis = new Redis({ host, port, lazyConnect: true });
@@ -98,6 +101,8 @@ async function run() {
     failed = true;
     console.log(`  ✗ Redis ${host}:${port}`);
     console.log(`    ${String(err && err.message ? err.message : err).split('\n')[0]}`);
+    console.log('    hint: docker compose exec redis-apk-rebuilder redis-cli ping');
+    console.log(`    hint: redis-cli -h ${host} -p ${port} ping`);
   }
 
   if (failed) {

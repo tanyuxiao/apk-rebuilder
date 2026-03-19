@@ -1,16 +1,18 @@
+import { t } from '../i18n.js';
+
 export function renderUploadSection(container) {
   container.insertAdjacentHTML(
     'beforeend',
     `
     <div class="card" id="sectionUpload">
-      <strong>上传 APK</strong>
+      <strong>${t('upload.title')}</strong>
       <div class="row">
         <input id="apkFile" type="file" accept=".apk,application/vnd.android.package-archive" style="display:none" />
-        <div id="dropzone" class="dropzone">拖拽 APK 到这里，或点击选择文件后自动解析</div>
+        <div id="dropzone" class="dropzone">${t('upload.dropHint')}</div>
       </div>
       <div class="row">
-        <span class="muted">任务ID: <code id="taskId">-</code></span>
-        <span class="muted">状态: <span id="taskStatus">idle</span></span>
+        <span class="muted">${t('upload.taskId')}: <code id="taskId">-</code></span>
+        <span class="muted">${t('upload.status')}: <span id="taskStatus">idle</span></span>
       </div>
     </div>
     `
@@ -61,7 +63,7 @@ export function setUploadBusy(isBusy) {
   const apkFile = document.getElementById('apkFile');
   if (!drop || !apkFile) return;
   drop.classList.toggle('loading', Boolean(isBusy));
-  drop.textContent = isBusy ? '上传并解析中，请稍候...' : '拖拽 APK 到这里，或点击选择文件后自动解析';
+  drop.textContent = isBusy ? t('upload.dropBusy') : t('upload.dropHint');
   drop.style.pointerEvents = isBusy ? 'none' : 'auto';
   apkFile.disabled = Boolean(isBusy);
 }

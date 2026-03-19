@@ -1,12 +1,14 @@
+import { t } from '../i18n.js';
+
 export function renderToolsCheck(container) {
   container.insertAdjacentHTML(
     'beforeend',
     `
     <div class="tools-check-wrap" id="toolsCheckWrap">
-      <button id="refreshTools" class="secondary">工具检查</button>
-      <span id="toolsCheckSummary" class="tools-check-summary">未检查</span>
+      <button id="refreshTools" class="secondary">${t('tools.check')}</button>
+      <span id="toolsCheckSummary" class="tools-check-summary">${t('tools.summary.none')}</span>
       <div id="toolsPopover" class="tools-popover" role="dialog" aria-live="polite">
-        <div class="tools-popover-title">工具检查结果</div>
+        <div class="tools-popover-title">${t('tools.results.title')}</div>
         <div id="toolsPopoverList" class="tools-popover-list"></div>
       </div>
     </div>
@@ -23,9 +25,9 @@ export function createToolsCheck({ state, api }) {
     const btn = document.getElementById('refreshTools');
     const summary = document.getElementById('toolsCheckSummary');
     if (!btn || !summary) return;
-    btn.textContent = '工具检查';
+    btn.textContent = t('tools.check');
     summary.classList.remove('ok', 'fail');
-    summary.textContent = total ? `${okCount}/${total} 通过` : '未检查';
+    summary.textContent = total ? t('tools.summary.passed', { ok: okCount, total }) : t('tools.summary.none');
     if (total) {
       if (okCount === total) summary.classList.add('ok');
       else summary.classList.add('fail');
@@ -39,7 +41,7 @@ export function createToolsCheck({ state, api }) {
     const list = document.getElementById('toolsPopoverList');
     if (!list) return;
     if (!names.length) {
-      list.innerHTML = '<div class="tools-popover-item">暂无检查结果</div>';
+      list.innerHTML = `<div class="tools-popover-item">${t('tools.results.empty')}</div>`;
       return;
     }
     list.innerHTML = names
@@ -63,7 +65,7 @@ export function createToolsCheck({ state, api }) {
     try {
       renderTools(await api('/api/tools'));
     } catch (e) {
-      alert(`工具链检查失败: ${e.message}`);
+      alert(t('tools.checkFailed', { message: e.message }));
     }
   }
 
@@ -72,12 +74,12 @@ export function createToolsCheck({ state, api }) {
     if (refreshBtn) {
       refreshBtn.addEventListener('click', async () => {
         const list = document.getElementById('toolsPopoverList');
-        if (list) list.innerHTML = '<div class="tools-popover-item">检查中...</div>';
+        if (list) list.innerHTML = `<div class="tools-popover-item">${t('tools.results.loading')}</div>`;
         setToolsPopoverOpen(true);
         try {
           await refreshTools();
         } catch (e) {
-          if (list) list.innerHTML = `<div class="tools-popover-item fail">检查失败: ${e?.message || '未知错误'}</div>`;
+          if (list) list.innerHTML = `<div class="tools-popover-item fail">${t('tools.results.fail', { message: e?.message || '未知错误' })}</div>`;
         }
       });
     }

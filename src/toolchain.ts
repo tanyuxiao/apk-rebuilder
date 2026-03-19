@@ -47,3 +47,20 @@ export function getToolchainStatus(): Record<string, unknown> {
     },
   };
 }
+
+export function assertToolchainAvailable(): void {
+  const status = getToolchainStatus() as {
+    tools: Record<string, { ok: boolean; detail?: string }>;
+  };
+  const missing: string[] = [];
+  const required = ['apktool', 'apksigner', 'keytool', 'java'];
+  for (const name of required) {
+    const tool = status.tools?.[name];
+    if (!tool || !tool.ok) {
+      missing.push(`${name}${tool?.detail ? ` (${tool.detail})` : ''}`);
+    }
+  }
+  if (missing.length > 0) {
+    throw new Error(`Toolchain unavailable: ${missing.join(', ')}`);
+  }
+}

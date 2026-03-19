@@ -9,7 +9,7 @@ import {
 } from '../types';
 import { isValidPackageName, isValidVersionCode } from '../validators';
 import { fetchArtifactToLocal } from '../artifactService';
-import { updateTask } from '../taskStore';
+import { updateTask, logTask } from '../taskStore';
 import { normalizeRelPath } from '../validators';
 import { toSafeFileStem } from '../validators';
 import { PLUGIN_MANIFEST_PATH } from '../config';
@@ -27,6 +27,15 @@ export function getPluginManifest(): unknown {
 
 export function mapPluginError(err: unknown): { status: number; code: string; message: string } {
   const message = String(err instanceof Error ? err.message : err);
+  if (message.includes('Host auth unauthorized')) {
+    return { status: 401, code: 'HOST_UNAUTHORIZED', message: 'Host token unauthorized' };
+  }
+  if (message.includes('Host permission denied')) {
+    return { status: 403, code: 'HOST_FORBIDDEN', message };
+  }
+  if (message.includes('Host auth base not configured') || message.includes('Host auth unavailable')) {
+    return { status: 503, code: 'HOST_AUTH_UNAVAILABLE', message };
+  }
   if (message.includes('Missing bearer token') || message.includes('Invalid token') || message.includes('Token expired')) {
     return { status: 401, code: 'UNAUTHORIZED', message };
   }
@@ -73,6 +82,7 @@ export function hasAnyModification(payload: ModPayload): boolean {
 export async function buildModPayload(
   tenantId: string,
   modifications: NonNullable<ModPayload> & { [key: string]: any },
+  task?: Task,
 ): Promise<ModPayload> {
   const unityPatches = Array.isArray(modifications?.unityPatches) ? modifications.unityPatches : [];
   const filePatches = Array.isArray(modifications?.filePatches) ? modifications.filePatches : [];
@@ -90,15 +100,19 @@ export async function buildModPayload(
       replacementArtifactId: patch.replacementArtifactId || null,
     };
     if (normalizedPatch.mode === 'file_replace' && normalizedPatch.replacementArtifactId && !normalizedPatch.replacementBase64) {
+      if (task) logTask(task, `[Host] Fetching replacement artifact from host: ${normalizedPatch.replacementArtifactId}`);
       const replacementPath = fetchArtifactToLocal(normalizedPatch.replacementArtifactId, tenantId);
       normalizedPatch.replacementBase64 = fs.readFileSync(replacementPath).toString('base64');
+      if (task) logTask(task, `[Host] Fetched and encoded artifact: ${normalizedPatch.replacementArtifactId}`);
     }
     normalizedFilePatches.push(normalizedPatch);
   }
 
   let iconUploadPath: string | null = null;
   if (modifications?.iconArtifactId) {
+    if (task) logTask(task, `[Host] Fetching icon artifact from host: ${modifications.iconArtifactId}`);
     iconUploadPath = fetchArtifactToLocal(modifications.iconArtifactId, tenantId);
+    if (task) logTask(task, `[Host] Fetched icon path: ${iconUploadPath}`);
   }
 
   return {

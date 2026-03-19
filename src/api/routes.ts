@@ -11,6 +11,7 @@ import { readEditableFile, parseFilePatchesInput } from '../filePatchService';
 import { parseApkInfo, findIconInDecoded } from '../manifestService';
 import { createTask, getTask, listTasks, logTask, updateTask } from '../taskStore';
 import { getToolchainStatus } from '../toolchain';
+import { getRedisStatus } from '../taskQueue';
 import { readUnityConfig, parseUnityPatchesInput } from '../unityConfigService';
 import { ApkInfo, ApkLibraryItem, ModPayload } from '../types';
 import { normalizeRelPath, toSafeFileStem } from '../validators';
@@ -26,6 +27,8 @@ export function createApiRouter(): Router {
 
   const MAX_TREE_NODES = 5000;
   const MAX_FILE_READ_BYTES = 512 * 1024;
+  const MAX_LOG_ITEMS = 2000;
+  const MAX_WORK_FILES = 2000;
 
   function getDecodedRootOrThrow(taskId: string): string {
     const task = getTask(taskId);
@@ -48,6 +51,74 @@ export function createApiRouter(): Router {
     return target;
   }
 
+  function safeJoinWorkDir(workDir: string, relPath: string): string {
+    const normalized = normalizeRelPath(relPath);
+    const base = path.resolve(workDir);
+    const target = path.resolve(base, normalized);
+    if (!target.startsWith(base)) {
+      throw new Error('Invalid path');
+    }
+    return target;
+  }
+
+  function readFilePreview(filePath: string): Record<string, unknown> {
+    const blob = fs.readFileSync(filePath);
+    const totalSize = blob.byteLength;
+    const truncated = totalSize > MAX_FILE_READ_BYTES;
+    const preview = blob.subarray(0, MAX_FILE_READ_BYTES);
+    const looksBinary = preview.includes(0);
+
+    if (looksBinary) {
+      return {
+        mime: mime.lookup(filePath) || 'application/octet-stream',
+        size: totalSize,
+        truncated,
+        encoding: 'base64',
+        kind: 'binary',
+        content: preview.toString('base64'),
+      };
+    }
+
+    return {
+      mime: mime.lookup(filePath) || 'text/plain',
+      size: totalSize,
+      truncated,
+      encoding: 'utf-8',
+      kind: 'text',
+      content: preview.toString('utf8'),
+    };
+  }
+
+  function listWorkFiles(baseRoot: string, includeDecoded: boolean): Array<{ path: string; size: number; mtimeMs: number }> {
+    const entries: Array<{ path: string; size: number; mtimeMs: number }> = [];
+    const stack = [baseRoot];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (!current) {
+        continue;
+      }
+      const rel = current === baseRoot ? '' : path.relative(baseRoot, current).split(path.sep).join('/');
+      const stat = fs.statSync(current);
+      if (stat.isDirectory()) {
+        const name = path.basename(current);
+        if (!includeDecoded && rel && name === 'decoded') {
+          continue;
+        }
+        const children = fs.readdirSync(current);
+        for (const child of children) {
+          stack.push(path.join(current, child));
+        }
+      } else {
+        if (entries.length >= MAX_WORK_FILES) {
+          throw new Error(`Too many files (> ${MAX_WORK_FILES})`);
+        }
+        entries.push({ path: rel, size: stat.size, mtimeMs: stat.mtimeMs });
+      }
+    }
+    entries.sort((a, b) => a.path.localeCompare(b.path));
+    return entries;
+  }
+
   function buildTreeNode(baseRoot: string, current: string, counter: { count: number }): Record<string, unknown> {
     counter.count += 1;
     if (counter.count > MAX_TREE_NODES) {
@@ -65,11 +136,13 @@ export function createApiRouter(): Router {
     return { name: path.basename(current), path: relPath, type: 'file', size: stat.size };
   }
 
-  function startTaskFromLibraryItem(item: ApkLibraryItem, tenantId?: string): Record<string, unknown> {
+  function startTaskFromLibraryItem(item: ApkLibraryItem, tenantId?: string, logPrefix?: string): Record<string, unknown> {
     if (!fs.existsSync(item.filePath)) {
       throw new Error('APK file is missing from storage');
     }
     const task = createTask(item.filePath, item.name || path.basename(item.filePath), item.id, tenantId);
+    logTask(task, `${logPrefix || 'Using APK from library'}: ${item.name || path.basename(item.filePath)} (id=${item.id})`);
+    
     const touched = touchApkItem(item.id, tenantId);
     const activeItem = touched || item;
     const cacheHit = Boolean(activeItem.parsedReady && activeItem.decodeCachePath && fs.existsSync(activeItem.decodeCachePath));
@@ -97,7 +170,18 @@ export function createApiRouter(): Router {
     };
   }
 
-  router.get('/health', (_req, res) => ok(res, { ok: true, service: 'backend' }));
+  router.get('/health', (_req, res) => {
+    const redis = getRedisStatus();
+    const toolchain = getToolchainStatus();
+    ok(res, {
+      ok: true,
+      service: 'backend',
+      deps: {
+        redis,
+        toolchain,
+      },
+    });
+  });
   router.get('/tools', (_req, res) => ok(res, getToolchainStatus()));
 
   router.post('/upload', upload.single('apk'), (req, res) => {
@@ -107,7 +191,8 @@ export function createApiRouter(): Router {
     }
     const tenantId = req.header('x-tenant-id');
     const { item, created } = addOrGetApkItem(req.file.originalname || 'uploaded.apk', req.file.buffer, tenantId || undefined);
-    ok(res, { ...startTaskFromLibraryItem(item, tenantId), deduplicatedUpload: !created });
+    const logPrefix = created ? 'Uploaded file' : 'Deduplicated upload (reused)';
+    ok(res, { ...startTaskFromLibraryItem(item, tenantId, logPrefix), deduplicatedUpload: !created });
   });
 
   router.get('/library/apks', (req, res) => {
@@ -153,7 +238,7 @@ export function createApiRouter(): Router {
       fail(res, 404, 'APK not found in library', 'NOT_FOUND');
       return;
     }
-    ok(res, startTaskFromLibraryItem(item, tenantId));
+    ok(res, startTaskFromLibraryItem(item, tenantId, 'Using APK from library'));
   });
 
   router.delete('/library/apks/:itemId', (req, res) => {
@@ -198,6 +283,104 @@ export function createApiRouter(): Router {
         logs: task.logs,
       })),
     });
+  });
+
+  router.get('/logs/tasks', requireAuth, (req, res) => {
+    const limit = Math.min(Number.parseInt(String(req.query['limit'] || '100'), 10) || 100, MAX_LOG_ITEMS);
+    ok(res, {
+      items: listTasks().map(task => {
+        const logs = task.logs || [];
+        return {
+          id: task.id,
+          sourceName: task.sourceName,
+          status: task.status,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt,
+          error: task.error,
+          logCount: logs.length,
+          lastLog: logs[logs.length - 1] || '',
+          logsTail: logs.slice(-limit),
+        };
+      }),
+    });
+  });
+
+  router.get('/logs/tasks/:taskId', requireAuth, (req, res) => {
+    const taskId = String(req.params['taskId']);
+    const task = getTask(taskId);
+    if (!task) {
+      fail(res, 404, 'Task not found', 'NOT_FOUND');
+      return;
+    }
+    const limit = Math.min(Number.parseInt(String(req.query['limit'] || '200'), 10) || 200, MAX_LOG_ITEMS);
+    ok(res, {
+      id: task.id,
+      sourceName: task.sourceName,
+      status: task.status,
+      createdAt: task.createdAt,
+      updatedAt: task.updatedAt,
+      error: task.error,
+      logCount: task.logs.length,
+      logs: task.logs.slice(-limit),
+    });
+  });
+
+  router.get('/logs/tasks/:taskId/files', requireAuth, (req, res) => {
+    const taskId = String(req.params['taskId']);
+    const task = getTask(taskId);
+    if (!task) {
+      fail(res, 404, 'Task not found', 'NOT_FOUND');
+      return;
+    }
+    if (!task.workDir || !fs.existsSync(task.workDir)) {
+      fail(res, 404, 'Task work directory not found', 'NOT_FOUND');
+      return;
+    }
+    try {
+      const includeDecoded = String(req.query['includeDecoded'] || '') === 'true';
+      const items = listWorkFiles(task.workDir, includeDecoded);
+      ok(res, { taskId: task.id, items });
+    } catch (error) {
+      fail(res, 400, String(error), 'BAD_REQUEST');
+    }
+  });
+
+  router.get('/logs/tasks/:taskId/file', requireAuth, (req, res) => {
+    const taskId = String(req.params['taskId']);
+    const task = getTask(taskId);
+    if (!task) {
+      fail(res, 404, 'Task not found', 'NOT_FOUND');
+      return;
+    }
+    if (!task.workDir || !fs.existsSync(task.workDir)) {
+      fail(res, 404, 'Task work directory not found', 'NOT_FOUND');
+      return;
+    }
+    try {
+      const relPath = String(req.query['path'] || '');
+      const filePath = safeJoinWorkDir(task.workDir, relPath);
+      if (!fs.existsSync(filePath)) {
+        fail(res, 404, 'File not found', 'NOT_FOUND');
+        return;
+      }
+      if (fs.statSync(filePath).isDirectory()) {
+        fail(res, 400, 'Path is a directory', 'BAD_REQUEST');
+        return;
+      }
+      ok(res, {
+        taskId: task.id,
+        path: normalizeRelPath(relPath),
+        name: path.basename(filePath),
+        ...readFilePreview(filePath),
+      });
+    } catch (error) {
+      fail(res, 400, String(error), 'BAD_REQUEST');
+    }
+  });
+
+  router.get('/logs/ui', requireAuth, (_req, res) => {
+    // redirect to the static logs.html for a cleaner standalone experience
+    res.redirect('/logs.html');
   });
 
   router.get('/icon/:taskId', (req, res) => {

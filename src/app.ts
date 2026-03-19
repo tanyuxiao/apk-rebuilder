@@ -3,7 +3,7 @@ import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { APK_REBUILDER_MODE, HOST, PORT, FRONTEND_PUBLIC_DIR, ensureRuntimeDirs } from './config';
+import { APK_REBUILDER_MODE, APK_REBUILDER_UI_MODE, HOST, PORT, FRONTEND_PUBLIC_DIR, ensureRuntimeDirs } from './config';
 import { createPluginRouter } from './plugin/routes';
 import { createApiRouter } from './api/routes';
 import { ok, fail } from './common/response';
@@ -45,18 +45,51 @@ app.get('*', (req, res) => {
     fail(res, 404, `Route not found: GET ${req.path}`, 'NOT_FOUND');
     return;
   }
-  if (APK_REBUILDER_MODE === 'dev') {
+  const requested = req.path === '/' ? 'index.html' : req.path.replace(/^\/+/, '');
+  const target = path.resolve(FRONTEND_PUBLIC_DIR, requested);
+  const isIndex = requested === 'index.html';
+  const isEmbed = requested === 'embed.html';
+  const fileExists = target.startsWith(path.resolve(FRONTEND_PUBLIC_DIR)) && fs.existsSync(target) && fs.statSync(target).isFile();
+
+  if (APK_REBUILDER_MODE === 'dev' && isIndex) {
     fail(res, 404, 'Dev mode enabled. Please use the Vite dev server for UI.', 'DEV_MODE_UI');
     return;
   }
-  if (!fs.existsSync(FRONTEND_PUBLIC_DIR)) {
-    fail(res, 404, 'Route not found', 'NOT_FOUND');
+  if (APK_REBUILDER_MODE === 'dev' && isEmbed) {
+    fail(res, 404, 'Dev mode enabled. Please use the Vite dev server for UI.', 'DEV_MODE_UI');
     return;
   }
-  const requested = req.path === '/' ? 'index.html' : req.path.replace(/^\/+/, '');
-  const target = path.resolve(FRONTEND_PUBLIC_DIR, requested);
-  if (target.startsWith(path.resolve(FRONTEND_PUBLIC_DIR)) && fs.existsSync(target) && fs.statSync(target).isFile()) {
+  
+  if (APK_REBUILDER_UI_MODE === 'embed') {
+    const normalized = requested.replace(/^\/+/, '');
+    const allowPrefixes = ['styles/', 'modules/'];
+    const allowRootFiles = new Set(['embed.html']);
+    const isAllowed =
+      allowRootFiles.has(normalized) ||
+      allowPrefixes.some(prefix => normalized.startsWith(prefix));
+
+    if (!isAllowed) {
+      // map root/index requests to embed entry for plugin usage
+      if (req.path === '/' || isIndex) {
+        res.sendFile(path.join(FRONTEND_PUBLIC_DIR, 'embed.html'));
+        return;
+      }
+      fail(res, 404, 'UI resource not available in embed-only mode.', 'NOT_FOUND');
+      return;
+    }
+  }
+
+  if (fileExists) {
     res.sendFile(target);
+    return;
+  }
+
+  if (APK_REBUILDER_MODE === 'dev') {
+     fail(res, 404, 'Dev mode enabled. Please use the Vite dev server for UI.', 'DEV_MODE_UI');
+     return;
+  }
+  if (APK_REBUILDER_UI_MODE === 'embed') {
+    fail(res, 404, 'UI resource not found.', 'NOT_FOUND');
     return;
   }
   res.sendFile(path.join(FRONTEND_PUBLIC_DIR, 'index.html'));

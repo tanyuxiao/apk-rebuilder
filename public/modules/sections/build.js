@@ -3,10 +3,11 @@ export function renderBuildSection(container) {
     'beforeend',
     `
     <div class="card" id="sectionBuild">
-      <div class="row">
-        <button id="modBtn">修改并构建</button>
-        <a id="downloadBtn" class="btn success" style="display:none" href="#">下载 APK</a>
-      </div>
+        <div class="mod-ops" style="display: flex; gap: 8px;">
+          <button class="btn-primary" id="modBtn" disabled>开始重构</button>
+          <button class="btn-secondary" id="viewLogsBtn" style="display: none;">查看实时日志</button>
+          <button class="btn-secondary" id="downloadBtn" style="display: none;">下载 APK</button>
+        </div>
       <div class="mod-progress-wrap">
         <div class="mod-progress-head">
           <span id="modProgressText">等待修改任务开始</span>
@@ -26,14 +27,41 @@ export function bindBuildSection({ onBuild }) {
   if (btn) {
     btn.addEventListener('click', () => onBuild());
   }
+
+  const viewLogsBtn = document.getElementById('viewLogsBtn');
+  if (viewLogsBtn) {
+    viewLogsBtn.onclick = () => {
+      const tid = viewLogsBtn.getAttribute('data-tid');
+      if (tid) window.open(`/logs.html?taskId=${tid}`, '_blank');
+    };
+  }
 }
 
 export function renderModProgress(state) {
   const bar = document.getElementById('modProgressBar');
   const text = document.getElementById('modProgressText');
   const pct = document.getElementById('modProgressPercent');
+  const viewLogsBtn = document.getElementById('viewLogsBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
 
   if (!bar || !text || !pct) return;
+
+  // Handle buttons visibility and data
+  if (viewLogsBtn) {
+    viewLogsBtn.style.display = state.id ? 'inline-block' : 'none';
+    if (state.id) viewLogsBtn.setAttribute('data-tid', state.id);
+  }
+
+  if (downloadBtn) {
+    const isSuccess = state.modProgress === 'success';
+    downloadBtn.style.display = isSuccess ? 'inline-block' : 'none';
+    if (isSuccess && state.id) {
+       downloadBtn.onclick = (e) => {
+         e.preventDefault();
+         window.location.href = `/api/download/${state.id}`;
+       };
+    }
+  }
 
   let p = 0;
   let t = '等待修改任务开始';
