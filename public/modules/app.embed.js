@@ -20,6 +20,15 @@ const wrap = document.createElement('div');
 wrap.className = 'wrap';
 root.appendChild(wrap);
 
+function renderBlockedAccess(message) {
+  wrap.innerHTML = `
+    <section class="card" style="max-width:760px;margin:40px auto;padding:28px;text-align:center;">
+      <h2 style="margin:0 0 10px;">${t('embed.accessDeniedTitle')}</h2>
+      <p class="muted" style="margin:0;">${message}</p>
+    </section>
+  `;
+}
+
 async function getAllowedActions() {
   try {
     const res = await host.hostFetch('/v1/plugin/allowed-actions?plugin_name=apk-rebuilder');
@@ -32,8 +41,20 @@ async function getAllowedActions() {
 }
 
 async function main() {
+  try {
+    await host.ensureHostEntry();
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    if (reason === 'REQUIRE_IFRAME_ENTRY') {
+      renderBlockedAccess(t('embed.requireMainSystem'));
+      return;
+    }
+    renderBlockedAccess(t('embed.authNotReady'));
+    return;
+  }
+
   const actions = await getAllowedActions();
-  const canAdmin = actions.includes('apk.rebuilder.admin');
+  const canAdmin = actions.includes('*') || actions.includes('apk.rebuilder.admin');
 
   renderHeader(wrap, {
     title: t('app.title'),

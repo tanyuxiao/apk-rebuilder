@@ -196,6 +196,9 @@ const DICTIONARY = {
     'embed.appNameRequired': '请填写应用名',
     'embed.sceneIdRequired': '请填写场景号',
     'embed.needStandard': '请先在标准包管理中设置当前标准包',
+    'embed.accessDeniedTitle': '访问受限',
+    'embed.requireMainSystem': '请从主框架中打开 APK Rebuilder 插件。',
+    'embed.authNotReady': '主框架认证未就绪，请返回主框架重新进入。',
   },
   'en-US': {
     'app.title': 'APK Rebuilder',
@@ -394,6 +397,9 @@ const DICTIONARY = {
     'embed.appNameRequired': 'Please enter app name',
     'embed.sceneIdRequired': 'Please enter scene ID',
     'embed.needStandard': 'Please set a standard package first',
+    'embed.accessDeniedTitle': 'Access Restricted',
+    'embed.requireMainSystem': 'Please open APK Rebuilder from the host application.',
+    'embed.authNotReady': 'Host authentication is not ready. Please re-enter from the host application.',
   },
   'zh-TW': {
     'app.title': 'APK 重構工具',
@@ -592,6 +598,9 @@ const DICTIONARY = {
     'embed.appNameRequired': '請填寫應用名稱',
     'embed.sceneIdRequired': '請填寫場景號',
     'embed.needStandard': '請先在標準包管理中設置當前標準包',
+    'embed.accessDeniedTitle': '存取受限',
+    'embed.requireMainSystem': '請從主框架中開啟 APK Rebuilder 外掛。',
+    'embed.authNotReady': '主框架認證尚未就緒，請返回主框架重新進入。',
   },
   'ja-JP': {
     'app.title': 'APK リビルドツール',
@@ -790,6 +799,9 @@ const DICTIONARY = {
     'embed.appNameRequired': 'アプリ名を入力してください',
     'embed.sceneIdRequired': 'シーンIDを入力してください',
     'embed.needStandard': '最初に標準パッケージを設定してください',
+    'embed.accessDeniedTitle': 'アクセス制限',
+    'embed.requireMainSystem': 'APK Rebuilder はホストアプリから開いてください。',
+    'embed.authNotReady': 'ホスト認証の準備ができていません。ホストから再度開いてください。',
   },
   'th-TH': {
     'app.title': 'เครื่องมือสร้าง APK',
@@ -988,6 +1000,9 @@ const DICTIONARY = {
     'embed.appNameRequired': 'กรุณากรอกชื่อแอป',
     'embed.sceneIdRequired': 'กรุณากรอก ID ซีน',
     'embed.needStandard': 'กรุณาตั้งค่าแพ็กเกจมาตรฐานก่อน',
+    'embed.accessDeniedTitle': 'การเข้าถึงถูกจำกัด',
+    'embed.requireMainSystem': 'โปรดเปิดปลั๊กอิน APK Rebuilder จากระบบหลัก',
+    'embed.authNotReady': 'การยืนยันตัวตนจากระบบหลักยังไม่พร้อม โปรดกลับไปเข้าใหม่จากระบบหลัก',
   },
 };
 

@@ -29,6 +29,12 @@ services:
       - HOST_API_BASE=http://host.docker.internal:8081
       - HOST_AUTH_DEBUG=${HOST_AUTH_DEBUG:-false}
     # command: ["npm", "run", "dev"] # 开发模式可改回
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3005/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
     depends_on:
       redis-apk-rebuilder:
@@ -42,9 +48,10 @@ services:
       - apk_rebuilder_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
-      retries: 5
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
 volumes:

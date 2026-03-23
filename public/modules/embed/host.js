@@ -20,17 +20,35 @@ export function createEmbedHost() {
     initResolve = resolve;
   });
 
+  function isInIframe() {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  }
+
   function ensureInit(timeout = 2000) {
     if (initResolved) return Promise.resolve();
     return Promise.race([
       initReady,
-      new Promise((resolve) =>
+      new Promise((_, reject) =>
         setTimeout(() => {
-          logAlways('INIT wait timeout');
-          resolve();
+          logAlways('INIT wait timeout (blocked)');
+          reject(new Error('INIT_TIMEOUT'));
         }, timeout)
       ),
     ]);
+  }
+
+  async function ensureHostEntry(timeout = 2000) {
+    if (!isInIframe()) {
+      throw new Error('REQUIRE_IFRAME_ENTRY');
+    }
+    await ensureInit(timeout);
+    if (!state.token) {
+      throw new Error('MISSING_HOST_TOKEN');
+    }
   }
 
   function applyInit(payload = {}) {
@@ -58,16 +76,6 @@ export function createEmbedHost() {
       initResolved = true;
       initResolve?.();
     }
-  }
-
-  function applyUrlParams() {
-    const params = new URLSearchParams(window.location.search);
-    const apiBase = params.get('apiBase');
-    const tenantId = params.get('tenantId');
-    const hostApiBase = params.get('hostApiBase');
-    if (apiBase) state.apiBase = apiBase;
-    if (tenantId) state.tenantId = tenantId;
-    if (hostApiBase) state.hostApiBase = hostApiBase;
   }
 
   function buildUrl(path) {
@@ -207,6 +215,7 @@ export function createEmbedHost() {
   }
 
   window.addEventListener('message', (e) => {
+    if (e.source !== window.parent) return;
     const msg = e.data || {};
     if (e.origin) parentOrigin = e.origin;
     if (msg.type === 'INIT' && msg.payload) {
@@ -230,10 +239,10 @@ export function createEmbedHost() {
     }
   });
 
-  applyUrlParams();
-
   return {
     state,
+    isInIframe,
+    ensureHostEntry,
     applyInit,
     buildUrl,
     authFetch,
