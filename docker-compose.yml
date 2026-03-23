@@ -30,7 +30,7 @@ services:
       - HOST_AUTH_DEBUG=${HOST_AUTH_DEBUG:-false}
     # command: ["npm", "run", "dev"] # 开发模式可改回
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3005/api/health"]
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:3005/api/health >/dev/null 2>&1"]
       interval: 30s
       timeout: 5s
       retries: 3
