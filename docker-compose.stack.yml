@@ -1,6 +1,8 @@
 services:
   apk-rebuilder:
-    image: hkccr.ccs.tencentyun.com/plugins/apk-rebuilder:latest
+    image: ghcr.io/tanyuxiao/apk-rebuilder:latest
+    # 腾讯云配置已注释，先用 GHCR 测试
+    # image: hkccr.ccs.tencentyun.com/plugins/apk-rebuilder:latest
     networks:
       - proxy
       - internal
