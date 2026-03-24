@@ -12,6 +12,7 @@ export function createEmbedHost() {
     token: '',
     config: {},
     hostApiBase: '',
+    roles: [],
   };
   let parentOrigin = '*';
   let initResolved = false;
@@ -60,14 +61,30 @@ export function createEmbedHost() {
     const apiBase = cfg.apiBase || cfg.api_base || payload.apiBase;
     const tenantId = cfg.tenantId || cfg.tenant_id || payload.tenantId;
     const hostApiBase = cfg.hostApiBase || cfg.mainApiBase || cfg.host_api_base || payload.hostApiBase;
+    const rawRoles =
+      payload.roles ??
+      payload.role ??
+      payload.user?.roles ??
+      cfg.roles ??
+      cfg.role;
     if (apiBase) state.apiBase = String(apiBase).trim();
     if (tenantId) state.tenantId = String(tenantId).trim();
     if (hostApiBase) state.hostApiBase = String(hostApiBase).trim();
+    if (rawRoles) {
+      if (Array.isArray(rawRoles)) {
+        state.roles = rawRoles.map(r => String(r).trim()).filter(Boolean);
+      } else if (typeof rawRoles === 'string') {
+        state.roles = rawRoles.split(',').map(r => r.trim()).filter(Boolean);
+      } else {
+        state.roles = [];
+      }
+    }
     logAlways('INIT received', {
       apiBase: state.apiBase,
       tenantId: state.tenantId,
       hostApiBase: state.hostApiBase,
       token: state.token ? `${state.token.slice(0, 6)}...` : '',
+      roles: state.roles,
     });
     if (!state.token) {
       logAlways('WARN: INIT token is empty');

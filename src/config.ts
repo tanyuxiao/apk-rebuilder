@@ -126,7 +126,7 @@ export const REDIS_CONNECT_RETRY_DELAY_MS = Number.parseInt(
 export const TOOLCHAIN_FALLBACK_LOCAL = process.env['TOOLCHAIN_FALLBACK_LOCAL'] !== 'false';
 
 export const BUILTIN_STANDARD_APK_PATH =
-  process.env['BUILTIN_STANDARD_APK_PATH'] || path.join(process.cwd(), 'packages', 'mrpp-apk-rebuilder.apk');
+  process.env['BUILTIN_STANDARD_APK_PATH'] || '';
 export const BUILTIN_STANDARD_APK_NAME =
   process.env['BUILTIN_STANDARD_APK_NAME'] || 'mrpp-apk-rebuilder.apk';
 

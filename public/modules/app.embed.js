@@ -56,10 +56,36 @@ async function main() {
     return;
   }
 
+  let roles = Array.isArray(host.state?.roles) ? host.state.roles : [];
+  if (typeof console !== 'undefined') {
+    console.info('[APK-REBUILDER] init payload', {
+      token: host.state?.token ? `${String(host.state.token).slice(0, 6)}...` : '',
+      roles: host.state?.roles,
+      config: host.state?.config,
+    });
+  }
+  try {
+    const res = await host.hostFetch('/v1/plugin/verify-token');
+    const json = await res.json().catch(() => ({}));
+    const fetchedRoles = json?.data?.roles;
+    if (Array.isArray(fetchedRoles)) {
+      roles = fetchedRoles.map(r => String(r).trim()).filter(Boolean);
+    }
+    if (typeof console !== 'undefined') {
+      console.info('[APK-REBUILDER] verify-token', { status: res.status, ok: res.ok, data: json });
+    }
+  } catch (err) {
+    if (typeof console !== 'undefined') {
+      console.info('[APK-REBUILDER] verify-token failed', String(err));
+    }
+  }
+
   const actions = await getAllowedActions();
   const hasActions = Array.isArray(actions) && actions.length > 0;
-  const assumeUser = !hasActions;
-  const canAdmin = !assumeUser && (actions.includes('*') || actions.includes('apk.rebuilder.admin'));
+  const isAdminByActions = hasActions && (actions.includes('*') || actions.includes('apk.rebuilder.admin'));
+  const isAdminByRoles = !hasActions && roles.some(r => r === 'admin' || r === 'root');
+  const canAdmin = isAdminByActions || isAdminByRoles;
+  const assumeUser = !canAdmin;
 
   renderHeader(wrap, {
     title: t('app.title'),

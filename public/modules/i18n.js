@@ -199,6 +199,7 @@ const DICTIONARY = {
     'embed.accessDeniedTitle': '访问受限',
     'embed.requireMainSystem': '请从主框架中打开 APK Rebuilder 插件。',
     'embed.authNotReady': '主框架认证未就绪，请返回主框架重新进入。',
+    'embed.roleNotAllowed': '权限不足，无法使用该插件。',
   },
   'en-US': {
     'app.title': 'APK Rebuilder',
@@ -400,6 +401,7 @@ const DICTIONARY = {
     'embed.accessDeniedTitle': 'Access Restricted',
     'embed.requireMainSystem': 'Please open APK Rebuilder from the host application.',
     'embed.authNotReady': 'Host authentication is not ready. Please re-enter from the host application.',
+    'embed.roleNotAllowed': 'Insufficient permissions to use this plugin.',
   },
   'zh-TW': {
     'app.title': 'APK 重構工具',
@@ -601,6 +603,7 @@ const DICTIONARY = {
     'embed.accessDeniedTitle': '存取受限',
     'embed.requireMainSystem': '請從主框架中開啟 APK Rebuilder 外掛。',
     'embed.authNotReady': '主框架認證尚未就緒，請返回主框架重新進入。',
+    'embed.roleNotAllowed': '權限不足，無法使用該外掛。',
   },
   'ja-JP': {
     'app.title': 'APK リビルドツール',
@@ -802,6 +805,7 @@ const DICTIONARY = {
     'embed.accessDeniedTitle': 'アクセス制限',
     'embed.requireMainSystem': 'APK Rebuilder はホストアプリから開いてください。',
     'embed.authNotReady': 'ホスト認証の準備ができていません。ホストから再度開いてください。',
+    'embed.roleNotAllowed': '権限が不足しているため利用できません。',
   },
   'th-TH': {
     'app.title': 'เครื่องมือสร้าง APK',
@@ -1003,6 +1007,7 @@ const DICTIONARY = {
     'embed.accessDeniedTitle': 'การเข้าถึงถูกจำกัด',
     'embed.requireMainSystem': 'โปรดเปิดปลั๊กอิน APK Rebuilder จากระบบหลัก',
     'embed.authNotReady': 'การยืนยันตัวตนจากระบบหลักยังไม่พร้อม โปรดกลับไปเข้าใหม่จากระบบหลัก',
+    'embed.roleNotAllowed': 'สิทธิ์ไม่เพียงพอในการใช้งานปลั๊กอินนี้',
   },
 };
 

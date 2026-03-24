@@ -58,23 +58,27 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY scripts ./scripts
 COPY public ./public
-COPY packages ./packages
 
 RUN set -eux; \
   mkdir -p /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION}; \
   cd /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION}; \
   unzip -q /tmp/build-tools.zip; \
   rm -f /tmp/build-tools.zip; \
-  tools_dir="$(dirname "$(find /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION} -type f -name apksigner | head -n1)")"; \
-  test -n "${tools_dir}"; \
-  test -f "${tools_dir}/zipalign"; \
-  # Slim build-tools: keep only apksigner/zipalign and their libs
-  find "${tools_dir}" -maxdepth 1 -type f ! -name 'apksigner' ! -name 'apksigner.jar' ! -name 'zipalign' -delete; \
-  find "${tools_dir}" -maxdepth 1 -type d ! -name '.' ! -name 'lib' ! -name 'lib64' -exec rm -rf {} +; \
-  printf '%s\n' '#!/bin/sh' "exec ${tools_dir}/zipalign \"\$@\"" > /usr/local/bin/zipalign; \
-  printf '%s\n' '#!/bin/sh' "exec ${tools_dir}/apksigner \"\$@\"" > /usr/local/bin/apksigner; \
+  apksigner_path="$(find /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION} -type f -name apksigner | head -n1)"; \
+  zipalign_path="$(find /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION} -type f -name zipalign | head -n1)"; \
+  test -n "${apksigner_path}"; \
+  test -n "${zipalign_path}"; \
+  # Slim build-tools: remove extra files but keep binaries + jars + libs
+  find /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION} \
+    -type f \
+    ! -name 'apksigner' \
+    ! -name 'apksigner.jar' \
+    ! -name 'zipalign' \
+    -delete; \
+  printf '%s\n' '#!/bin/sh' "exec ${zipalign_path} \"\$@\"" > /usr/local/bin/zipalign; \
+  printf '%s\n' '#!/bin/sh' "exec ${apksigner_path} \"\$@\"" > /usr/local/bin/apksigner; \
   printf '%s\n' '#!/bin/sh' 'exec java -jar /opt/apktool/apktool.jar "$@"' > /usr/local/bin/apktool; \
-  chmod +x /usr/local/bin/apktool /usr/local/bin/zipalign /usr/local/bin/apksigner "${tools_dir}/zipalign" "${tools_dir}/apksigner"
+  chmod +x /usr/local/bin/apktool /usr/local/bin/zipalign /usr/local/bin/apksigner "${zipalign_path}" "${apksigner_path}"
 
 ENV APKTOOL_PATH=/usr/local/bin/apktool
 ENV ZIPALIGN_PATH=/usr/local/bin/zipalign
