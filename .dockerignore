@@ -7,3 +7,10 @@ data
 .venv
 __pycache__
 *.pyc
+node_modules
+dist
+coverage
+tools
+.github
+docker-compose*.yml
+README*.md

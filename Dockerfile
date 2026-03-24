@@ -19,8 +19,8 @@ ARG APKTOOL_VERSION=2.11.1
 ARG APKTOOL_JAR_URL=https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar
 ARG ANDROID_BUILD_TOOLS_URL=https://dl.google.com/android/repository/build-tools_r34-linux.zip
 
-COPY package.json tsconfig.json ./
-RUN npm install
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci
 
 RUN set -eux; \
   mkdir -p /opt/tooling; \
@@ -29,8 +29,8 @@ RUN set -eux; \
 
 COPY src ./src
 COPY public ./public
-COPY packages ./packages
 RUN npm run build
+RUN npm prune --omit=dev
 
 FROM ${NODE_IMAGE} AS runtime
 WORKDIR /app
@@ -68,6 +68,9 @@ RUN set -eux; \
   tools_dir="$(dirname "$(find /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION} -type f -name apksigner | head -n1)")"; \
   test -n "${tools_dir}"; \
   test -f "${tools_dir}/zipalign"; \
+  # Slim build-tools: keep only apksigner/zipalign and their libs
+  find "${tools_dir}" -maxdepth 1 -type f ! -name 'apksigner' ! -name 'apksigner.jar' ! -name 'zipalign' -delete; \
+  find "${tools_dir}" -maxdepth 1 -type d ! -name '.' ! -name 'lib' ! -name 'lib64' -exec rm -rf {} +; \
   printf '%s\n' '#!/bin/sh' "exec ${tools_dir}/zipalign \"\$@\"" > /usr/local/bin/zipalign; \
   printf '%s\n' '#!/bin/sh' "exec ${tools_dir}/apksigner \"\$@\"" > /usr/local/bin/apksigner; \
   printf '%s\n' '#!/bin/sh' 'exec java -jar /opt/apktool/apktool.jar "$@"' > /usr/local/bin/apktool; \
