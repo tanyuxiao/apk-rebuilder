@@ -54,7 +54,9 @@ async function main() {
   }
 
   const actions = await getAllowedActions();
-  const canAdmin = actions.includes('*') || actions.includes('apk.rebuilder.admin');
+  const hasActions = Array.isArray(actions) && actions.length > 0;
+  const assumeUser = !hasActions;
+  const canAdmin = !assumeUser && (actions.includes('*') || actions.includes('apk.rebuilder.admin'));
 
   renderHeader(wrap, {
     title: t('app.title'),
@@ -82,6 +84,7 @@ async function main() {
   const sceneSection = createSceneConfigSection({ host, perPage: 10 });
 
 async function getStandardPackageId() {
+  if (assumeUser) return '';
   console.info('[APK-REBUILDER] call /plugin/standard-package');
   const res = await host.authFetch('/plugin/standard-package');
   const json = await res.json().catch(() => ({}));
@@ -117,7 +120,7 @@ async function uploadIconIfNeeded() {
       return null;
     }
     const standardLibraryItemId = await getStandardPackageId();
-    if (!standardLibraryItemId) {
+    if (!standardLibraryItemId && !assumeUser) {
       await showAlert(t('embed.needStandard'));
       return null;
     }

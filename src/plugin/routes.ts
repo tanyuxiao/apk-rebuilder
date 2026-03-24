@@ -62,11 +62,12 @@ export function createPluginRouter(): Router {
 
       const artifactId = String(source?.artifactId || '').trim();
       const libraryItemId = String(source?.libraryItemId || '').trim();
-      if (!artifactId && !libraryItemId) {
+      const hasLibrarySource = Boolean(libraryItemId) || useStandardPackage;
+      if (!artifactId && !hasLibrarySource) {
         fail(res, 400, 'source.artifactId or source.libraryItemId is required', 'BAD_REQUEST');
         return;
       }
-      if (artifactId && libraryItemId) {
+      if (artifactId && hasLibrarySource) {
         fail(res, 400, 'source.artifactId and source.libraryItemId are mutually exclusive', 'BAD_REQUEST');
         return;
       }
@@ -75,7 +76,7 @@ export function createPluginRouter(): Router {
 
       let task;
       let cacheHit = false;
-      if (libraryItemId) {
+      if (hasLibrarySource) {
         let resolvedId = libraryItemId;
         if (useStandardPackage) {
           const resolved = resolveStandardLibraryItem(principal.tenantId);

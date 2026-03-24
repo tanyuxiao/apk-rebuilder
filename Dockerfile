@@ -29,6 +29,7 @@ RUN set -eux; \
 
 COPY src ./src
 COPY public ./public
+COPY packages ./packages
 RUN npm run build
 
 FROM ${NODE_IMAGE} AS runtime
@@ -57,6 +58,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY scripts ./scripts
 COPY public ./public
+COPY packages ./packages
 
 RUN set -eux; \
   mkdir -p /opt/android/build-tools/${ANDROID_BUILD_TOOLS_VERSION}; \

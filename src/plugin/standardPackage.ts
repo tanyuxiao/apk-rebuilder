@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { STANDARD_PACKAGE_PATH } from '../config';
-import { getApkItem } from '../apkLibrary';
+import { BUILTIN_STANDARD_APK_NAME, BUILTIN_STANDARD_APK_PATH, STANDARD_PACKAGE_PATH } from '../config';
+import { addOrGetApkItem, getApkItem } from '../apkLibrary';
 import { normalizeSafeSegment } from '../validators';
 
 export type StandardPackageConfig = {
@@ -89,6 +89,16 @@ export function resolveStandardLibraryItem(tenantId?: string): {
 
   if (config.previousStandardId && !isDisabled(config.previousStandardId) && exists(config.previousStandardId)) {
     return { libraryItemId: config.previousStandardId, usedFallback: true, reason: 'FALLBACK_TO_PREVIOUS' };
+  }
+
+  if (BUILTIN_STANDARD_APK_PATH && fs.existsSync(BUILTIN_STANDARD_APK_PATH)) {
+    try {
+      const data = fs.readFileSync(BUILTIN_STANDARD_APK_PATH);
+      const { item } = addOrGetApkItem(BUILTIN_STANDARD_APK_NAME, data, tenantId);
+      return { libraryItemId: item.id, usedFallback: true, reason: 'FALLBACK_TO_BUILTIN' };
+    } catch {
+      // ignore builtin errors and fall through
+    }
   }
 
   return { libraryItemId: null, usedFallback: false, reason: 'STANDARD_PACKAGE_MISSING' };
