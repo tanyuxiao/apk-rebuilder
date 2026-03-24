@@ -78,6 +78,15 @@ export function createEmbedHost() {
     }
   }
 
+  function sendPluginReady() {
+    if (!window.parent) return;
+    logAlways('postMessage -> PLUGIN_READY', { origin: parentOrigin });
+    window.parent.postMessage(
+      { type: 'PLUGIN_READY', id: `ready-${Date.now()}` },
+      parentOrigin || '*'
+    );
+  }
+
   function buildUrl(path) {
     if (!path) return state.apiBase || '';
     if (path.startsWith('http')) return path;
@@ -221,13 +230,6 @@ export function createEmbedHost() {
     if (msg.type === 'INIT' && msg.payload) {
       logAlways('postMessage <- INIT', { origin: e.origin });
       applyInit(msg.payload);
-      if (window.parent) {
-        logAlways('postMessage -> PLUGIN_READY', { origin: parentOrigin });
-        window.parent.postMessage(
-          { type: 'PLUGIN_READY', id: `ready-${Date.now()}` },
-          parentOrigin
-        );
-      }
     }
     if (msg.type === 'TOKEN_UPDATE' && msg.payload) {
       if (msg.payload.token) state.token = String(msg.payload.token).trim();
@@ -238,6 +240,9 @@ export function createEmbedHost() {
       state.token = '';
     }
   });
+
+  // Align with host handshake: notify readiness immediately so host can send INIT.
+  sendPluginReady();
 
   return {
     state,

@@ -6,7 +6,14 @@ export function renderHeader(container, options = {}) {
     subtitle = t('header.subtitle.short'),
     showSubtitle = true,
     showToolsCheck = false,
+    version = '',
   } = options || {};
+
+  const toolsHtml = showToolsCheck ? '<div class="apk-header-tools" id="toolsCheckSlot"></div>' : '';
+  const versionHtml = version ? `<div class="apk-header-version">${version}</div>` : '';
+  const rightHtml = (toolsHtml || versionHtml)
+    ? `<div class="apk-header-right">${toolsHtml}${versionHtml}</div>`
+    : '';
 
   container.insertAdjacentHTML(
     'beforeend',
@@ -16,7 +23,7 @@ export function renderHeader(container, options = {}) {
         <div class="apk-header-title">${title}</div>
         ${showSubtitle ? `<div class="apk-header-subtitle">${subtitle}</div>` : ''}
       </div>
-      ${showToolsCheck ? '<div class="apk-header-tools" id="toolsCheckSlot"></div>' : ''}
+      ${rightHtml}
     </div>
     `
   );

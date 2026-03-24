@@ -26,6 +26,7 @@ export function initApp({
   headerTitle = 'APK Rebuilder',
   headerSubtitle = t('header.subtitle.full'),
   showHeaderSubtitle = true,
+  headerVersion = '',
 } = {}) {
   const root = document.getElementById('app') || document.body;
 
@@ -43,6 +44,7 @@ export function initApp({
     subtitle: headerSubtitle,
     showSubtitle: showHeaderSubtitle,
     showToolsCheck,
+    version: headerVersion,
   });
 
   if (showToolsCheck) {

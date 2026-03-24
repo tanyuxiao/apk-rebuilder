@@ -13,6 +13,8 @@ import { t } from './i18n.js';
 initThemeSync();
 document.title = t('app.titleEmbed');
 
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? `v${__APP_VERSION__}` : '';
+
 const host = createEmbedHost();
 
 const root = document.getElementById('app') || document.body;
@@ -25,6 +27,7 @@ function renderBlockedAccess(message) {
     <section class="card" style="max-width:760px;margin:40px auto;padding:28px;text-align:center;">
       <h2 style="margin:0 0 10px;">${t('embed.accessDeniedTitle')}</h2>
       <p class="muted" style="margin:0;">${message}</p>
+      ${appVersion ? `<div style="margin-top:10px;font-size:12px;color:#b0b0b0;">${appVersion}</div>` : ''}
     </section>
   `;
 }
@@ -63,6 +66,7 @@ async function main() {
     subtitle: t('header.subtitle.embed'),
     showSubtitle: true,
     showToolsCheck: false,
+    version: appVersion,
   });
 
   if (canAdmin) {
