@@ -9,7 +9,7 @@ export function renderSceneConfigSection(container) {
         <strong>${t('scene.title')}</strong>
         <div class="scene-search">
           <input id="sceneSearch" type="text" placeholder="${t('scene.searchPlaceholder')}" />
-          <button id="sceneSearchBtn" class="btn ghost">${t('scene.search')}</button>
+          <button id="sceneSearchBtn" class="btn btn-secondary">${t('scene.search')}</button>
         </div>
       </div>
       <input id="sceneId" type="hidden" />

@@ -1,4 +1,4 @@
-import { state, setIcon } from './state.js';
+import { state, setIcon, api } from './state.js';
 import { createEmbedHost } from './embed/host.js';
 import { renderStandardPackageSection, createStandardPackageSection } from './sections/standard-package.js';
 import { renderHeader } from './sections/header.js';
@@ -6,9 +6,10 @@ import { renderPackageInfoSection, bindPackageInfoSection } from './sections/pac
 import { renderSceneConfigSection, createSceneConfigSection } from './sections/scene-config.js';
 import { renderSubmitSection, createSubmitSection } from './sections/submit.js';
 import { renderIconEditorModal, createIconEditor } from './modals/icon-editor.js';
+import { renderToolsCheck, createToolsCheck } from './tools/check-tools.js';
 import { showAlert } from './embed/notify.js';
 import { initThemeSync } from './theme.js';
-import { t } from './i18n.js';
+import { t, onLanguageChange } from './i18n.js';
 
 initThemeSync();
 document.title = t('app.titleEmbed');
@@ -43,6 +44,138 @@ async function getAllowedActions() {
   }
 }
 
+let canAdmin = false;
+let assumeUser = true;
+let isRendering = false;
+
+function cleanupUi() {
+  wrap.innerHTML = '';
+  const modal = document.getElementById('iconEditorMask');
+  if (modal) modal.remove();
+}
+
+function buildUi() {
+  cleanupUi();
+
+  renderHeader(wrap, {
+    title: t('app.title'),
+    subtitle: t('header.subtitle.embed'),
+    showSubtitle: true,
+    showToolsCheck: canAdmin,
+    version: appVersion,
+  });
+
+  if (canAdmin) {
+    const slot = document.getElementById('toolsCheckSlot');
+    if (slot) renderToolsCheck(slot);
+    renderStandardPackageSection(wrap, { canAdmin });
+  }
+  renderPackageInfoSection(wrap, {
+    showOriginal: false,
+    fields: ['appName'],
+    showIcon: true,
+    showChangeCount: false,
+    title: t('pkg.title'),
+  });
+  renderSceneConfigSection(wrap);
+  renderSubmitSection(wrap);
+  renderIconEditorModal(document.body);
+
+  const standardSection = canAdmin ? createStandardPackageSection({ host, canAdmin }) : null;
+  const tools = canAdmin ? createToolsCheck({ state, api }) : null;
+  const iconModal = createIconEditor({ state, onIconChanged: () => setIcon('newIcon', 'newIconEmpty', state.iconPreviewUrl) });
+  const sceneSection = createSceneConfigSection({ host, perPage: 10 });
+
+  async function getStandardPackageId() {
+    if (assumeUser) return '';
+    console.info('[APK-REBUILDER] call /plugin/standard-package');
+    const res = await host.authFetch('/plugin/standard-package');
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error?.message || t('standard.fetchFailed'));
+    const data = json?.data || json;
+    return data?.standardLibraryItemId || '';
+  }
+
+  async function uploadIconIfNeeded() {
+    const icon = state.iconFile;
+    if (!icon) return null;
+    const form = new FormData();
+    form.append('icon', icon);
+    console.info('[APK-REBUILDER] call /plugin/icon-upload');
+    const res = await host.authFetch('/plugin/icon-upload', { method: 'POST', body: form });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error?.message || t('standard.iconUploadFailed'));
+    const data = json?.data || json;
+    return data?.artifactId || null;
+  }
+
+  const submitSection = createSubmitSection({
+    host,
+    getPayload: async () => {
+      const appName = document.getElementById('appName')?.value.trim() || '';
+      const sceneId = document.getElementById('sceneId')?.value.trim() || '';
+      if (!appName) {
+        await showAlert(t('embed.appNameRequired'));
+        return null;
+      }
+      if (!sceneId) {
+        await showAlert(t('embed.sceneIdRequired'));
+        return null;
+      }
+      const standardLibraryItemId = await getStandardPackageId();
+      if (!standardLibraryItemId && !assumeUser) {
+        await showAlert(t('embed.needStandard'));
+        return null;
+      }
+      const iconArtifactId = await uploadIconIfNeeded();
+      return {
+        input: {
+          source: { libraryItemId: standardLibraryItemId },
+          modifications: {
+            appName,
+            unityPatches: [{ path: 'sceneId', value: /^\d+$/.test(sceneId) ? Number(sceneId) : sceneId }],
+            unityConfigPath: null,
+            iconArtifactId,
+          },
+          options: {
+            async: true,
+            reuseDecodedCache: true,
+            useStandardPackage: true,
+          },
+        },
+      };
+    },
+  });
+
+  bindPackageInfoSection({
+    onInputChange: () => {},
+    onPickIcon: (file) =>
+      iconModal.prepareIconEditor(file).catch(() => showAlert(t('icon.readFail'))),
+  });
+
+  standardSection?.bind();
+  tools?.bind();
+  submitSection.bind();
+  iconModal.bind();
+  sceneSection.bind();
+  standardSection?.load().catch((e) => showAlert(e.message || t('standard.listLoadFailed')));
+  tools?.refreshTools?.();
+  sceneSection.load().catch((e) => showAlert(e.message || t('standard.sceneLoadFailed')));
+}
+
+function rerenderUi() {
+  if (isRendering) return;
+  isRendering = true;
+  const sceneId = document.getElementById('sceneId')?.value || '';
+  const searchValue = document.getElementById('sceneSearch')?.value || '';
+  buildUi();
+  const sceneIdEl = document.getElementById('sceneId');
+  if (sceneIdEl) sceneIdEl.value = sceneId;
+  const searchEl = document.getElementById('sceneSearch');
+  if (searchEl) searchEl.value = searchValue;
+  isRendering = false;
+}
+
 async function main() {
   try {
     await host.ensureHostEntry();
@@ -72,7 +205,13 @@ async function main() {
       roles = fetchedRoles.map(r => String(r).trim()).filter(Boolean);
     }
     if (typeof console !== 'undefined') {
-      console.info('[APK-REBUILDER] verify-token', { status: res.status, ok: res.ok, data: json });
+      console.info('[APK-REBUILDER] verify-token', {
+        status: res.status,
+        ok: res.ok,
+        roles: fetchedRoles,
+        data: json,
+      });
+      console.info('[APK-REBUILDER] roles after verify-token', roles);
     }
   } catch (err) {
     if (typeof console !== 'undefined') {
@@ -84,108 +223,24 @@ async function main() {
   const hasActions = Array.isArray(actions) && actions.length > 0;
   const isAdminByActions = hasActions && (actions.includes('*') || actions.includes('apk.rebuilder.admin'));
   const isAdminByRoles = !hasActions && roles.some(r => r === 'admin' || r === 'root');
-  const canAdmin = isAdminByActions || isAdminByRoles;
-  const assumeUser = !canAdmin;
-
-  renderHeader(wrap, {
-    title: t('app.title'),
-    subtitle: t('header.subtitle.embed'),
-    showSubtitle: true,
-    showToolsCheck: false,
-    version: appVersion,
-  });
-
-  if (canAdmin) {
-    renderStandardPackageSection(wrap, { canAdmin });
+  canAdmin = isAdminByActions || isAdminByRoles;
+  assumeUser = !canAdmin;
+  if (typeof console !== 'undefined') {
+    console.info('[APK-REBUILDER] permission snapshot', {
+      actions,
+      hasActions,
+      isAdminByActions,
+      roles,
+      isAdminByRoles,
+      canAdmin,
+    });
   }
-  renderPackageInfoSection(wrap, {
-    showOriginal: false,
-    fields: ['appName'],
-    showIcon: true,
-    showChangeCount: false,
-    title: t('pkg.title'),
-  });
-  renderSceneConfigSection(wrap);
-  renderSubmitSection(wrap);
-  renderIconEditorModal(document.body);
 
-  const standardSection = canAdmin ? createStandardPackageSection({ host, canAdmin }) : null;
-  const iconModal = createIconEditor({ state, onIconChanged: () => setIcon('newIcon', 'newIconEmpty', state.iconPreviewUrl) });
-  const sceneSection = createSceneConfigSection({ host, perPage: 10 });
-
-async function getStandardPackageId() {
-  if (assumeUser) return '';
-  console.info('[APK-REBUILDER] call /plugin/standard-package');
-  const res = await host.authFetch('/plugin/standard-package');
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message || t('standard.fetchFailed'));
-  const data = json?.data || json;
-  return data?.standardLibraryItemId || '';
-}
-
-async function uploadIconIfNeeded() {
-  const icon = state.iconFile;
-  if (!icon) return null;
-  const form = new FormData();
-  form.append('icon', icon);
-  console.info('[APK-REBUILDER] call /plugin/icon-upload');
-  const res = await host.authFetch('/plugin/icon-upload', { method: 'POST', body: form });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message || t('standard.iconUploadFailed'));
-  const data = json?.data || json;
-  return data?.artifactId || null;
-}
-
-  const submitSection = createSubmitSection({
-  host,
-  getPayload: async () => {
-    const appName = document.getElementById('appName')?.value.trim() || '';
-    const sceneId = document.getElementById('sceneId')?.value.trim() || '';
-    if (!appName) {
-      await showAlert(t('embed.appNameRequired'));
-      return null;
-    }
-    if (!sceneId) {
-      await showAlert(t('embed.sceneIdRequired'));
-      return null;
-    }
-    const standardLibraryItemId = await getStandardPackageId();
-    if (!standardLibraryItemId && !assumeUser) {
-      await showAlert(t('embed.needStandard'));
-      return null;
-    }
-    const iconArtifactId = await uploadIconIfNeeded();
-    return {
-      input: {
-        source: { libraryItemId: standardLibraryItemId },
-        modifications: {
-          appName,
-          unityPatches: [{ path: 'sceneId', value: /^\d+$/.test(sceneId) ? Number(sceneId) : sceneId }],
-          unityConfigPath: null,
-          iconArtifactId,
-        },
-        options: {
-          async: true,
-          reuseDecodedCache: true,
-          useStandardPackage: true,
-        },
-      },
-    };
-  },
-  });
-
-  bindPackageInfoSection({
-    onInputChange: () => {},
-    onPickIcon: (file) =>
-      iconModal.prepareIconEditor(file).catch(() => showAlert(t('icon.readFail'))),
-  });
-
-  standardSection?.bind();
-  submitSection.bind();
-  iconModal.bind();
-  sceneSection.bind();
-  standardSection?.load().catch((e) => showAlert(e.message || t('standard.listLoadFailed')));
-  sceneSection.load().catch((e) => showAlert(e.message || t('standard.sceneLoadFailed')));
+  buildUi();
 }
 
 main().catch((e) => console.error(e));
+
+onLanguageChange(() => {
+  rerenderUi();
+});

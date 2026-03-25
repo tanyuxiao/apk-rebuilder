@@ -6,7 +6,7 @@ export function renderSubmitSection(container) {
     `
     <div class="card" id="sectionSubmit">
       <div class="row">
-        <button id="submitBtn">${t('submit.title')}</button>
+        <button id="submitBtn" class="btn submit-btn">${t('submit.title')}</button>
         <a id="downloadLink" class="btn success" style="display:none" href="#" target="_blank" rel="noopener">${t('submit.download')}</a>
       </div>
       <div class="row" style="margin-top:8px;">

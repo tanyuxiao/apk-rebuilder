@@ -203,8 +203,13 @@ body.apk-index {
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .compare-box {
@@ -266,44 +271,7 @@ body.apk-index {
   min-height: 24px;
 }
 
-.icon-box {
-  width: 76px;
-  height: 76px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  background: var(--bg-card);
-  margin-bottom: 8px;
-}
-
-.icon-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.icon-empty {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.file-pick {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.file-pick input[type="file"] {
-  display: none;
-}
-
-.file-name {
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
+/* 图标编辑区样式已迁移到 ui.base.css */
 
 .target-file-row {
   display: grid;
@@ -325,8 +293,13 @@ body.apk-index {
   color: var(--text-muted);
 }
 
-.load-status.ok { color: var(--success-color); }
-.load-status.fail { color: var(--danger-color); }
+.load-status.ok {
+  color: var(--success-color);
+}
+
+.load-status.fail {
+  color: var(--danger-color);
+}
 
 .unity-grid {
   display: grid;
@@ -482,8 +455,13 @@ body.apk-index {
   white-space: nowrap;
 }
 
-.tools-check-summary.ok { color: var(--success-color); }
-.tools-check-summary.fail { color: var(--danger-color); }
+.tools-check-summary.ok {
+  color: var(--success-color);
+}
+
+.tools-check-summary.fail {
+  color: var(--danger-color);
+}
 
 .tools-popover {
   position: absolute;
@@ -499,7 +477,9 @@ body.apk-index {
   display: none;
 }
 
-.tools-popover.open { display: block; }
+.tools-popover.open {
+  display: block;
+}
 
 .tools-popover-title {
   font-size: 13px;
@@ -897,10 +877,23 @@ body.apk-index {
   color: var(--primary-color);
 }
 
-#logOutputContainer::-webkit-scrollbar { width: 8px; height: 8px; }
-#logOutputContainer::-webkit-scrollbar-track { background: transparent; }
-#logOutputContainer::-webkit-scrollbar-thumb { background: var(--border-color-hover); border-radius: 10px; }
-#logOutputContainer::-webkit-scrollbar-thumb:hover { background: var(--border-color-active); }
+#logOutputContainer::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+#logOutputContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#logOutputContainer::-webkit-scrollbar-thumb {
+  background: var(--border-color-hover);
+  border-radius: 10px;
+}
+
+#logOutputContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--border-color-active);
+}
 
 .modal-mask {
   position: fixed;

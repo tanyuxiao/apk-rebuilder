@@ -53,7 +53,7 @@ const DICTIONARY = {
     'upload.onlyApk': '仅支持 APK 文件',
     'upload.needUpload': '请先上传并解析 APK',
 
-    'pkg.title': '包信息修改',
+    'pkg.title': '基础信息配置',
     'pkg.appName': '应用名',
     'pkg.packageName': '包名',
     'pkg.versionName': '版本名',
@@ -255,7 +255,7 @@ const DICTIONARY = {
     'upload.onlyApk': 'Only APK files are supported',
     'upload.needUpload': 'Upload and parse an APK first',
 
-    'pkg.title': 'Package Info',
+    'pkg.title': 'Basic Info Settings',
     'pkg.appName': 'App Name',
     'pkg.packageName': 'Package Name',
     'pkg.versionName': 'Version Name',
@@ -457,7 +457,7 @@ const DICTIONARY = {
     'upload.onlyApk': '僅支援 APK 檔案',
     'upload.needUpload': '請先上傳並解析 APK',
 
-    'pkg.title': '包資訊修改',
+    'pkg.title': '基礎資訊設定',
     'pkg.appName': '應用名稱',
     'pkg.packageName': '包名',
     'pkg.versionName': '版本名稱',
@@ -659,7 +659,7 @@ const DICTIONARY = {
     'upload.onlyApk': 'APK ファイルのみ対応',
     'upload.needUpload': 'まず APK をアップロードして解析してください',
 
-    'pkg.title': 'パッケージ情報',
+    'pkg.title': '基本情報設定',
     'pkg.appName': 'アプリ名',
     'pkg.packageName': 'パッケージ名',
     'pkg.versionName': 'バージョン名',
@@ -861,7 +861,7 @@ const DICTIONARY = {
     'upload.onlyApk': 'รองรับเฉพาะไฟล์ APK',
     'upload.needUpload': 'โปรดอัปโหลดและแยกวิเคราะห์ APK ก่อน',
 
-    'pkg.title': 'ข้อมูลแพ็กเกจ',
+    'pkg.title': 'ตั้งค่าข้อมูลพื้นฐาน',
     'pkg.appName': 'ชื่อแอป',
     'pkg.packageName': 'ชื่อแพ็กเกจ',
     'pkg.versionName': 'ชื่อเวอร์ชัน',

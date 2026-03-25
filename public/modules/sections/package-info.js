@@ -41,16 +41,22 @@ export function renderPackageInfoSection(container, options = {}) {
 
   const iconHtml = showIcon
     ? `
-        <div class="icon-box">
-          <img id="newIcon" alt="new icon" style="display:none" />
-          <span id="newIconEmpty" class="icon-empty">${t('pkg.noIcon')}</span>
-        </div>
-        <div class="field">
-          <label>${t('pkg.newIcon')}</label>
-          <div class="file-pick">
-            <input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" />
-            <button id="pickIconBtn" type="button" class="secondary">${t('pkg.pickIcon')}</button>
-            <span id="iconFileName" class="file-name">${t('pkg.noFile')}</span>
+        <div class="icon-edit-row">
+          <div class="icon-edit-left">
+            <div class="field">
+              <label>${t('pkg.newIcon')}</label>
+              <div class="file-pick">
+                <input id="iconFile" type="file" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg" />
+                <button id="pickIconBtn" type="button" class="secondary">${t('pkg.pickIcon')}</button>
+                <span id="iconFileName" class="file-name">${t('pkg.noFile')}</span>
+              </div>
+            </div>
+          </div>
+          <div class="icon-edit-right">
+            <div class="icon-box">
+              <img id="newIcon" alt="new icon" style="display:none" />
+              <span id="newIconEmpty" class="icon-empty">${t('pkg.noIcon')}</span>
+            </div>
           </div>
         </div>
       `
@@ -69,9 +75,8 @@ export function renderPackageInfoSection(container, options = {}) {
       <div class="grid" style="${gridStyle}">
         ${originalHtml}
         <div class="compare-box editable-pane">
-          <div class="compare-title">${t('pkg.modifyInfo')}</div>
-          ${iconHtml}
           ${fieldsHtml}
+          ${iconHtml}
         </div>
       </div>
     </div>
